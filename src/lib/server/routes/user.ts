@@ -1,0 +1,161 @@
+import { TRPCError } from '@trpc/server';
+import { sql } from 'kysely';
+import { z } from 'zod';
+
+import {
+  authedProcedure,
+  permissionProcedure,
+  publicProcedure,
+  router,
+} from '../trpc';
+
+import { db } from '$lib/db';
+import { hasPermission } from '$lib/server/authorization/authorize';
+import { loadLockedAuthorizationContext } from '$lib/server/authorization/context';
+import {
+  canActOnUser,
+  listDirectoryUsers,
+} from '$lib/server/authorization/users';
+import { lockRoles } from '$lib/server/authorization/roles';
+import { createApiKey } from '$lib/server/utils/auth';
+import { updateUserPreferences } from '$lib/server/utils/user';
+import { updatePreferencesSchema } from '$lib/zod/user';
+import { grantableSubset } from '$lib/api/v1/scopes';
+
+export const userRouter = router({
+  me: authedProcedure.query(({ ctx: { user } }) => {
+    return user;
+  }),
+  isSetup: publicProcedure.query(async () => {
+    const users = await db
+      .selectFrom('user')
+      .select(sql`1`.as('exists'))
+      .limit(1)
+      .execute();
+    return users.length > 0;
+  }),
+  delete: authedProcedure.input(z.string()).mutation(async ({ ctx, input }) => {
+    return await db.transaction().execute(async (trx) => {
+      const currentAuthorization = await loadLockedAuthorizationContext(
+        ctx.authorization.userId,
+        trx,
+      );
+      if (!currentAuthorization) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      const user = await trx
+        .selectFrom('user')
+        .select(['id', 'isOwner', 'roleId'])
+        .where('id', '=', input)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!user) return false;
+      if (user.isOwner) throw new TRPCError({ code: 'FORBIDDEN' });
+      await lockRoles(trx, [user.roleId]);
+      if (
+        ctx.user.id !== input &&
+        (!hasPermission(currentAuthorization, 'users.delete') ||
+          !(await canActOnUser(currentAuthorization, user, trx)))
+      ) {
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+
+      const affectedJourneys = await trx
+        .selectFrom('journeyPassenger')
+        .select('journeyId')
+        .where('userId', '=', input)
+        .execute();
+
+      const result = await trx
+        .deleteFrom('user')
+        .where('id', '=', input)
+        .executeTakeFirst();
+
+      const affectedJourneyIds = affectedJourneys.map(
+        ({ journeyId }) => journeyId,
+      );
+      if (affectedJourneyIds.length > 0) {
+        await trx
+          .deleteFrom('journey')
+          .where('id', 'in', affectedJourneyIds)
+          .where(({ not, exists, selectFrom }) =>
+            not(
+              exists(
+                selectFrom('journeyPassenger')
+                  .select('id')
+                  .whereRef('journeyPassenger.journeyId', '=', 'journey.id'),
+              ),
+            ),
+          )
+          .execute();
+      }
+
+      return result.numDeletedRows > 0;
+    });
+  }),
+  list: permissionProcedure('users.directory.read').query(async ({ ctx }) =>
+    listDirectoryUsers(ctx.authorization),
+  ),
+  listApiKeys: authedProcedure.query(async ({ ctx }) => {
+    return db
+      .selectFrom('apiKey')
+      .select(['id', 'name', 'createdAt', 'lastUsed', 'scopes'])
+      .where('userId', '=', ctx.user.id)
+      .execute();
+  }),
+  createApiKey: authedProcedure
+    .input(
+      z.object({ name: z.string().trim().min(1), scopes: z.array(z.string()) }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const scopes = grantableSubset(ctx.authorization, input.scopes);
+      if (!scopes) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'One or more requested scopes are not available.',
+        });
+      }
+      return await createApiKey(ctx.user.id, input.name, scopes);
+    }),
+  deleteApiKey: authedProcedure
+    .input(z.number())
+    .mutation(async ({ ctx, input }) => {
+      const result = await db
+        .deleteFrom('apiKey')
+        .where('id', '=', input)
+        .where('userId', '=', ctx.user.id)
+        .executeTakeFirst();
+      return result.numDeletedRows > 0;
+    }),
+  listConnectedApps: authedProcedure.query(async ({ ctx }) =>
+    db
+      .selectFrom('oauthGrant')
+      .innerJoin('oauthClient', 'oauthClient.id', 'oauthGrant.clientId')
+      .select([
+        'oauthGrant.id',
+        'oauthGrant.resource',
+        'oauthGrant.scopes',
+        'oauthGrant.updatedAt',
+        'oauthClient.name',
+      ])
+      .where('oauthGrant.userId', '=', ctx.user.id)
+      .orderBy('oauthGrant.updatedAt', 'desc')
+      .execute(),
+  ),
+  revokeConnectedApp: authedProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      const result = await db
+        .deleteFrom('oauthGrant')
+        .where('id', '=', input)
+        .where('userId', '=', ctx.user.id)
+        .executeTakeFirst();
+      return result.numDeletedRows > 0;
+    }),
+  updatePreferences: authedProcedure
+    .input(updatePreferencesSchema)
+    .mutation(async ({ ctx, input }) => {
+      await updateUserPreferences(ctx.user.id, input);
+      return true;
+    }),
+});

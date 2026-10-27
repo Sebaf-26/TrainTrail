@@ -1,0 +1,14 @@
+import type { RequestEvent } from '@sveltejs/kit';
+import type { inferAsyncReturnType } from '@trpc/server';
+
+export async function createContext(event: RequestEvent) {
+  return {
+    cookies: event.cookies,
+    url: event.url,
+    user: event.locals.user,
+    session: event.locals.session,
+    authorization: event.locals.authorization,
+  };
+}
+
+export type Context = inferAsyncReturnType<typeof createContext>;

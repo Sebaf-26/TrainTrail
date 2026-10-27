@@ -1,0 +1,53 @@
+TrainTrail
+Copyright (C) 2026 The TrainTrail authors
+
+TrainTrail is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License, version 3, as published by the Free
+Software Foundation. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY. See the LICENSE file for the full text.
+
+------------------------------------------------------------------------------
+Origin and attribution
+------------------------------------------------------------------------------
+
+TrainTrail is a modified version of AirTrail, a self-hosted flight tracker
+created by Johan Ohly and the AirTrail contributors, and released under the
+GNU General Public License, version 3.
+
+  Original project:  https://github.com/johanohly/AirTrail
+  Based on:          commit ed100a90cd31bc583ca567ddf636a2fcfb408858
+                     (release v3.13.1, 2026-10-24)
+  First modified:    2026-10-27
+
+What changed: the flight-tracking domain was replaced with rail travel
+(stations, operators, trains and journeys instead of airports, airlines,
+aircraft and flights), and the project was renamed.
+
+The copyright of the original authors in the code that remains from AirTrail is
+retained. Nothing in this file removes, replaces or limits it.
+
+------------------------------------------------------------------------------
+Terms that apply to anyone who copies or modifies TrainTrail
+------------------------------------------------------------------------------
+
+1. The GNU General Public License, version 3 (see LICENSE) applies to the whole
+   work. Every distributed copy or modified version, including forks, must be
+   released under the same license with its complete corresponding source code
+   available to the people who receive it.
+
+2. Additional term under section 7(b) of the GNU GPL v3, for the material added
+   by the TrainTrail authors: any work based on TrainTrail must preserve this
+   NOTICE file, must keep a visible credit to TrainTrail and a link to its
+   repository in its README, and must keep that credit in the legal notices the
+   application displays to its users.
+
+3. Modified versions must be marked as such and must state the date of the
+   change (GNU GPL v3, section 5(a)).
+
+------------------------------------------------------------------------------
+Third-party components
+------------------------------------------------------------------------------
+
+TrainTrail depends on third-party libraries and data sets that keep their own
+licenses and attribution requirements. See package.json and bun.lock for the
+libraries; data sources are credited in the README.

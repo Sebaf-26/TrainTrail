@@ -1,0 +1,116 @@
+<script lang="ts">
+  import { Plus } from '@o7/icon/lucide';
+  import { toast } from 'svelte-sonner';
+  import { defaults, type Infer, superForm } from 'sveltekit-superforms';
+  import { zod4 as zod } from 'sveltekit-superforms/adapters';
+
+  import OperatorFormFields from './OperatorFormFields.svelte';
+
+  import IconUploadField from '$lib/components/form-fields/IconUploadField.svelte';
+  import { Button } from '$lib/components/ui/button';
+  import * as Form from '$lib/components/ui/form';
+  import { Label } from '$lib/components/ui/label';
+  import {
+    Modal,
+    ModalBody,
+    ModalBreadcrumbHeader,
+  } from '$lib/components/ui/modal';
+  import { trpc } from '$lib/trpc';
+  import {
+    operatorSearchCache,
+    clearOperatorLookupCaches,
+  } from '$lib/utils/data/operators';
+  import { operatorSchema } from '$lib/zod/operator';
+
+  let { open = $bindable(false), withoutTrigger } = $props();
+
+  let pendingIconFile = $state<File | null>(null);
+
+  async function uploadPendingIcon(operatorId: number) {
+    if (!pendingIconFile) return;
+
+    const formData = new FormData();
+    formData.append('file', pendingIconFile);
+    formData.append('operatorId', operatorId.toString());
+
+    try {
+      const response = await fetch('/api/operator/icon', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        toast.error(result.error || 'Failed to upload icon');
+      }
+    } catch {
+      toast.error('Failed to upload icon');
+    }
+  }
+
+  const form = superForm(
+    defaults<Infer<typeof operatorSchema>>(zod(operatorSchema)),
+    {
+      dataType: 'json',
+      validators: zod(operatorSchema),
+      async onUpdated({ form }) {
+        if (form.message) {
+          if (form.message.type === 'success') {
+            // Upload pending icon if one was selected
+            if (pendingIconFile && form.message.id) {
+              await uploadPendingIcon(form.message.id);
+            }
+            pendingIconFile = null;
+            trpc.operator.list.utils.invalidate();
+            operatorSearchCache.clear();
+            clearOperatorLookupCaches();
+            open = false;
+            return void toast.success(form.message.text);
+          }
+          toast.error(form.message.text);
+        }
+      },
+    },
+  );
+  const { enhance, submitting, tainted } = form;
+</script>
+
+{#if !withoutTrigger}
+  <Button variant="outline" onclick={() => (open = true)}>
+    <Plus size={16} class="shrink-0" />
+    Create
+  </Button>
+{/if}
+
+<Modal
+  bind:open
+  dismissal="form"
+  dirty={form.isTainted($tainted) || pendingIconFile !== null}
+  busy={$submitting}
+  onDiscard={() => {
+    form.reset();
+    pendingIconFile = null;
+  }}
+>
+  <ModalBreadcrumbHeader section="Operators" title="Add operator" icon={Plus} />
+  <ModalBody>
+    <form
+      method="POST"
+      action="/api/operator/save/form"
+      class="grid gap-4"
+      use:enhance
+    >
+      <OperatorFormFields {form} />
+      <div class="space-y-2">
+        <Label>Icon</Label>
+        <IconUploadField
+          currentIconPath={null}
+          operatorId={null}
+          pendingMode={true}
+          bind:pendingFile={pendingIconFile}
+        />
+      </div>
+      <Form.Button>Create</Form.Button>
+    </form>
+  </ModalBody>
+</Modal>

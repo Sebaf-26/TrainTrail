@@ -1,0 +1,40 @@
+services:
+  db:
+    container_name: traintrail_db
+    image: postgres:16-alpine
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  traintrail:
+    container_name: traintrail
+    image: traintrail:latest
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
+    volumes:
+      # Required for file uploads (e.g., operator icons)
+      # The path to the right of the colon needs to match UPLOAD_LOCATION in your .env file
+      # TrainTrail gives it to PUID:PGID (1000:1000 by default) on every start
+      - uploads:/app/uploads
+      # To keep uploads in a folder on the host instead, use a bind mount, such as:
+      # - ./data/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  uploads:

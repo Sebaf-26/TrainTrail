@@ -1,0 +1,23 @@
+name: traintrail-development
+
+services:
+  db:
+    container_name: traintrail_dev_db
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: traintrail
+      POSTGRES_USER: traintrail
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U traintrail']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - '5432:5432'
+
+volumes:
+  db_data:

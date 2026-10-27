@@ -1,0 +1,347 @@
+[
+  {
+    "id": "acela",
+    "name": "Acela",
+    "code": null
+  },
+  {
+    "id": "agc",
+    "name": "AGC",
+    "code": null
+  },
+  {
+    "id": "alvia",
+    "name": "Alvia",
+    "code": null
+  },
+  {
+    "id": "amtrak-superliner",
+    "name": "Amtrak Superliner",
+    "code": null
+  },
+  {
+    "id": "avant",
+    "name": "Avant",
+    "code": null
+  },
+  {
+    "id": "ave-s-100",
+    "name": "AVE S-100",
+    "code": null
+  },
+  {
+    "id": "ave-s-102",
+    "name": "AVE S-102",
+    "code": null
+  },
+  {
+    "id": "ave-s-103",
+    "name": "AVE S-103",
+    "code": null
+  },
+  {
+    "id": "ave-s-112",
+    "name": "AVE S-112",
+    "code": null
+  },
+  {
+    "id": "class-220-221-voyager",
+    "name": "Class 220/221 Voyager",
+    "code": "Class 220"
+  },
+  {
+    "id": "class-390-pendolino",
+    "name": "Class 390 Pendolino",
+    "code": "Class 390"
+  },
+  {
+    "id": "class-395-javelin",
+    "name": "Class 395 Javelin",
+    "code": "Class 395"
+  },
+  {
+    "id": "class-700",
+    "name": "Class 700",
+    "code": "Class 700"
+  },
+  {
+    "id": "class-800-iet",
+    "name": "Class 800 (IET)",
+    "code": "Class 800"
+  },
+  {
+    "id": "class-801-azuma",
+    "name": "Class 801 (Azuma)",
+    "code": "Class 801"
+  },
+  {
+    "id": "cr400af-fuxing",
+    "name": "CR400AF Fuxing",
+    "code": null
+  },
+  {
+    "id": "crh380a",
+    "name": "CRH380A",
+    "code": null
+  },
+  {
+    "id": "etr-610",
+    "name": "ETR 610",
+    "code": "ETR 610"
+  },
+  {
+    "id": "eurostar-e300",
+    "name": "Eurostar e300",
+    "code": "Class 373"
+  },
+  {
+    "id": "eurostar-e320",
+    "name": "Eurostar e320",
+    "code": "Class 374"
+  },
+  {
+    "id": "frecciabianca",
+    "name": "Frecciabianca",
+    "code": null
+  },
+  {
+    "id": "frecciargento",
+    "name": "Frecciargento",
+    "code": null
+  },
+  {
+    "id": "frecciarossa-1000",
+    "name": "Frecciarossa 1000",
+    "code": "ETR 400"
+  },
+  {
+    "id": "frecciarossa-etr-500",
+    "name": "Frecciarossa ETR 500",
+    "code": "ETR 500"
+  },
+  {
+    "id": "giruno",
+    "name": "Giruno",
+    "code": "RABe 501"
+  },
+  {
+    "id": "heritage-steam",
+    "name": "Heritage steam",
+    "code": null
+  },
+  {
+    "id": "hst",
+    "name": "HST",
+    "code": "Class 43"
+  },
+  {
+    "id": "ice-1",
+    "name": "ICE 1",
+    "code": "BR 401"
+  },
+  {
+    "id": "ice-2",
+    "name": "ICE 2",
+    "code": "BR 402"
+  },
+  {
+    "id": "ice-3",
+    "name": "ICE 3",
+    "code": "BR 403"
+  },
+  {
+    "id": "ice-3-velaro",
+    "name": "ICE 3 (Velaro)",
+    "code": "BR 407"
+  },
+  {
+    "id": "ice-3neo",
+    "name": "ICE 3neo",
+    "code": "BR 408"
+  },
+  {
+    "id": "ice-4",
+    "name": "ICE 4",
+    "code": "BR 412"
+  },
+  {
+    "id": "ice-t",
+    "name": "ICE T",
+    "code": "BR 411"
+  },
+  {
+    "id": "icn",
+    "name": "ICN",
+    "code": "RABDe 500"
+  },
+  {
+    "id": "icng",
+    "name": "ICNG",
+    "code": null
+  },
+  {
+    "id": "intercity",
+    "name": "Intercity",
+    "code": null
+  },
+  {
+    "id": "intercity-ic",
+    "name": "Intercity (IC)",
+    "code": null
+  },
+  {
+    "id": "intercity-notte",
+    "name": "Intercity Notte",
+    "code": null
+  },
+  {
+    "id": "italo-agv-575",
+    "name": "Italo AGV 575",
+    "code": "ETR 575"
+  },
+  {
+    "id": "italo-evo",
+    "name": "Italo EVO",
+    "code": "ETR 675"
+  },
+  {
+    "id": "jazz",
+    "name": "Jazz",
+    "code": "ETR 425"
+  },
+  {
+    "id": "ktx-sancheon",
+    "name": "KTX-Sancheon",
+    "code": null
+  },
+  {
+    "id": "minuetto",
+    "name": "Minuetto",
+    "code": "ALe 501"
+  },
+  {
+    "id": "nightjet",
+    "name": "Nightjet",
+    "code": null
+  },
+  {
+    "id": "ouigo-tgv-duplex",
+    "name": "OUIGO TGV Duplex",
+    "code": null
+  },
+  {
+    "id": "pop",
+    "name": "Pop",
+    "code": null
+  },
+  {
+    "id": "railjet",
+    "name": "Railjet",
+    "code": null
+  },
+  {
+    "id": "railjet-xpress",
+    "name": "Railjet Xpress",
+    "code": null
+  },
+  {
+    "id": "regio-2n",
+    "name": "Régio 2N",
+    "code": null
+  },
+  {
+    "id": "regiolis",
+    "name": "Regiolis",
+    "code": null
+  },
+  {
+    "id": "regional-train",
+    "name": "Regional train",
+    "code": null
+  },
+  {
+    "id": "regionale",
+    "name": "Regionale",
+    "code": null
+  },
+  {
+    "id": "regionale-veloce",
+    "name": "Regionale Veloce",
+    "code": null
+  },
+  {
+    "id": "rock",
+    "name": "Rock",
+    "code": "ETR 521/522"
+  },
+  {
+    "id": "shinkansen-e5",
+    "name": "Shinkansen E5",
+    "code": null
+  },
+  {
+    "id": "shinkansen-e7",
+    "name": "Shinkansen E7",
+    "code": null
+  },
+  {
+    "id": "shinkansen-n700s",
+    "name": "Shinkansen N700S",
+    "code": null
+  },
+  {
+    "id": "siemens-venture",
+    "name": "Siemens Venture",
+    "code": null
+  },
+  {
+    "id": "sleeper-train",
+    "name": "Sleeper train",
+    "code": null
+  },
+  {
+    "id": "taiwan-hsr-700t",
+    "name": "Taiwan HSR 700T",
+    "code": null
+  },
+  {
+    "id": "tgv-atlantique",
+    "name": "TGV Atlantique",
+    "code": null
+  },
+  {
+    "id": "tgv-duplex",
+    "name": "TGV Duplex",
+    "code": null
+  },
+  {
+    "id": "tgv-m-avelia-horizon",
+    "name": "TGV M (Avelia Horizon)",
+    "code": null
+  },
+  {
+    "id": "tgv-pos",
+    "name": "TGV POS",
+    "code": null
+  },
+  {
+    "id": "tgv-reseau",
+    "name": "TGV Réseau",
+    "code": null
+  },
+  {
+    "id": "thalys-pbka",
+    "name": "Thalys PBKA",
+    "code": null
+  },
+  {
+    "id": "virm",
+    "name": "VIRM",
+    "code": null
+  },
+  {
+    "id": "vivalto",
+    "name": "Vivalto",
+    "code": null
+  }
+]

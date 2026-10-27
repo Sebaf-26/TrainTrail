@@ -1,0 +1,474 @@
+datasource db {
+  provider   = "postgresql"
+  extensions = [unaccent]
+}
+
+generator kysely {
+  provider        = "prisma-kysely"
+  previewFeatures = ["postgresqlExtensions"]
+
+  output    = "../src/lib/db"
+  fileName  = "schema.d.ts"
+  camelCase = true
+}
+
+model app_config {
+  id     Int  @id @default(autoincrement())
+  config Json @default("{}")
+}
+
+model user {
+  id           String  @id
+  username     String  @unique
+  display_name String
+  password     String?
+
+  role_id                String?
+  is_owner               Boolean @default(false)
+  /// @kyselyType('local' | 'oauth')
+  role_assignment_source String  @default("local")
+
+  oauth_id String? @unique
+
+  /// @kyselyType('km' | 'mi')
+  distance_unit        String @default("km")
+  /// @kyselyType('12h' | '24h' | 'auto')
+  time_format          String @default("auto")
+  /// @kyselyType('iso' | 'us' | 'eu' | 'auto')
+  date_format          String @default("auto")
+  /// @kyselyType('mon' | 'sun' | 'auto')
+  week_starts_on       String @default("auto")
+  /// @kyselyType('station' | 'utc' | 'system')
+  journey_time_display String @default("station")
+
+  sessions                     session[]
+  journey_passengers           journey_passenger[]
+  visited_countries            visited_country[]
+  api_keys                     api_key[]
+  public_share                 public_share[]
+  oauth_link_token             oauth_link_token?
+  access_role                  access_role?                  @relation(fields: [role_id], references: [id], onDelete: Restrict)
+  oauth_authorization_requests oauth_authorization_request[]
+  oauth_grants                 oauth_grant[]
+  oauth_authorization_codes    oauth_authorization_code[]
+  oauth_access_tokens          oauth_access_token[]
+  oauth_refresh_tokens         oauth_refresh_token[]
+}
+
+model access_role {
+  id          String   @id
+  name        String
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  users                 user[]
+  permissions           access_role_permission[]
+  authorization_setting authorization_settings?
+  oauth_mappings        oauth_role_mapping[]
+}
+
+model access_role_permission {
+  role_id    String
+  permission String
+
+  role access_role @relation(fields: [role_id], references: [id], onDelete: Cascade)
+
+  @@id([role_id, permission])
+}
+
+model authorization_settings {
+  id                      Int    @id @default(1)
+  default_role_id         String @unique
+  /// @kyselyType('off' | 'on_create' | 'on_login')
+  oauth_role_mapping_mode String @default("off")
+
+  default_role access_role @relation(fields: [default_role_id], references: [id], onDelete: Restrict)
+}
+
+model oauth_role_mapping {
+  id           Int     @id @default(autoincrement())
+  priority     Int
+  name         String  @default("")
+  enabled      Boolean @default(true)
+  /// @kyselyType('userinfo' | 'id_token')
+  claim_source String
+  claim_path   String
+  /// @kyselyType('equals' | 'contains')
+  operator     String
+  claim_value  String
+  role_id      String
+
+  role access_role @relation(fields: [role_id], references: [id], onDelete: Restrict)
+
+  @@index([priority])
+}
+
+model oauth_link_token {
+  id         String   @id
+  token      String   @unique
+  user_id    String   @unique
+  oauth_sub  String
+  expires_at DateTime @db.Timestamptz
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+model station {
+  id              Int     @id @default(autoincrement())
+  code            String  @unique
+  /// UIC location code, when known
+  uic             String?
+  /// ViaggiaTreno (Trenitalia/RFI) station id, e.g. S01700
+  viaggiatreno_id String?
+  lat             Float
+  lon             Float
+  tz              String
+  name            String
+  municipality    String?
+  /// @kyselyType('main' | 'station')
+  type            String
+  /// @kyselyType('EU' | 'NA' | 'SA' | 'AS' | 'AF' | 'OC' | 'AN')
+  continent       String
+  country         String
+  custom          Boolean @default(false)
+
+  journeys_from journey[] @relation("journeys_from")
+
+  journeys_to journey[] @relation("journeys_to")
+}
+
+model train {
+  id        Int     @id @default(autoincrement())
+  name      String
+  code      String?
+  source_id String?
+
+  journeys journey[]
+
+  @@index([source_id], map: "train_source_id_idx")
+}
+
+model operator {
+  id        Int     @id @default(autoincrement())
+  name      String
+  code      String?
+  icon_path String?
+  source_id String?
+
+  journeys journey[]
+
+  @@index([source_id], map: "operator_source_id_idx")
+}
+
+model journey {
+  id                  Int     @id @default(autoincrement())
+  date                String
+  /// @kyselyType('day' | 'month' | 'year')
+  date_precision      String  @default("day")
+  /// YYYY-MM-DDTHH:mm:ss.sssZ (ISO-8601)
+  departure           String?
+  /// YYYY-MM-DDTHH:mm:ss.sssZ (ISO-8601)
+  arrival             String?
+  /// YYYY-MM-DDTHH:mm:ss.sssZ (ISO-8601)
+  departure_scheduled String?
+  /// YYYY-MM-DDTHH:mm:ss.sssZ (ISO-8601)
+  arrival_scheduled   String?
+  duration            Int?
+
+  departure_platform String?
+  arrival_platform   String?
+
+  train_number String?
+  unit_number  String?
+  note         String?
+
+  from_id     Int?
+  to_id       Int?
+  train_id    Int?
+  operator_id Int?
+
+  from       station?            @relation("journeys_from", fields: [from_id], references: [id])
+  to         station?            @relation("journeys_to", fields: [to_id], references: [id])
+  train      train?              @relation(fields: [train_id], references: [id])
+  operator   operator?           @relation(fields: [operator_id], references: [id])
+  passengers journey_passenger[]
+  track      journey_track?
+
+  @@index([from_id], map: "journey_from_id_idx")
+  @@index([to_id], map: "journey_to_id_idx")
+}
+
+model journey_track {
+  journey_id Int  @id
+  track      Json
+
+  /// @kyselyType('gpx' | 'kml' | 'csv' | 'readsb')
+  source_format String
+  source_name   String?
+  point_count   Int
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  journey journey @relation(fields: [journey_id], references: [id], onDelete: Cascade)
+}
+
+model journey_passenger {
+  id         Int     @id @default(autoincrement())
+  journey_id Int
+  user_id    String?
+  guest_name String?
+
+  /// @kyselyType('window' | 'aisle' | 'table' | 'standing' | 'other')
+  seat           String?
+  /// Coach number or name (e.g. 7)
+  coach          String?
+  /// Seat number (e.g. 12A)
+  seat_number    String?
+  /// @kyselyType('second' | 'first' | 'business' | 'premium' | 'sleeper')
+  seat_class     String?
+  /// @kyselyType('leisure' | 'business' | 'commute' | 'other')
+  journey_reason String?
+
+  user    user?   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  journey journey @relation(fields: [journey_id], references: [id], onDelete: Cascade)
+
+  @@unique([journey_id, user_id], map: "journey_passenger_user_id_journey_id_key")
+  @@unique([journey_id, guest_name], map: "journey_passenger_journey_id_guest_name_key")
+}
+
+model visited_country {
+  id Int @id @default(autoincrement())
+
+  /// ISO 3166-1 alpha-2 or EU user-assigned country code
+  code   String  @db.VarChar(2)
+  /// @kyselyType('lived' | 'visited' | 'layover' | 'wishlist')
+  status String
+  note   String?
+
+  user_id String
+  user    user   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([code, user_id], map: "visited_country_code_user_id_key")
+}
+
+model session {
+  id         String   @id
+  expires_at DateTime @db.Timestamptz
+  user_id    String
+  user       user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model api_key {
+  id         Int       @id @default(autoincrement())
+  name       String
+  user_id    String
+  key        String
+  created_at DateTime  @default(now()) @db.Timestamptz
+  last_used  DateTime? @db.Timestamptz
+  scopes     String[]
+
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model oauth_client {
+  id                         String   @id
+  name                       String
+  client_secret_hash         String?
+  token_endpoint_auth_method String   @default("none")
+  created_at                 DateTime @default(now()) @db.Timestamptz
+
+  redirect_uris          oauth_client_redirect_uri[]
+  authorization_requests oauth_authorization_request[]
+  grants                 oauth_grant[]
+  authorization_codes    oauth_authorization_code[]
+  access_tokens          oauth_access_token[]
+  refresh_tokens         oauth_refresh_token[]
+}
+
+model oauth_client_redirect_uri {
+  client_id    String
+  redirect_uri String
+
+  client oauth_client @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([client_id, redirect_uri])
+}
+
+model oauth_authorization_request {
+  id             String   @id
+  client_id      String
+  user_id        String?
+  redirect_uri   String
+  scopes         String[]
+  resource       String
+  state          String?
+  code_challenge String
+  expires_at     DateTime @db.Timestamptz
+  created_at     DateTime @default(now()) @db.Timestamptz
+
+  client oauth_client @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   user?        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at])
+}
+
+model oauth_grant {
+  id         String   @id
+  client_id  String
+  user_id    String
+  resource   String
+  scopes     String[]
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  client              oauth_client               @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user                user                       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  authorization_codes oauth_authorization_code[]
+  access_tokens       oauth_access_token[]
+  refresh_tokens      oauth_refresh_token[]
+
+  @@unique([client_id, user_id, resource])
+}
+
+model oauth_authorization_code {
+  code_hash      String    @id
+  client_id      String
+  user_id        String
+  grant_id       String
+  redirect_uri   String
+  scopes         String[]
+  resource       String
+  code_challenge String
+  expires_at     DateTime  @db.Timestamptz
+  used_at        DateTime? @db.Timestamptz
+  created_at     DateTime  @default(now()) @db.Timestamptz
+
+  client oauth_client @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   user         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  grant  oauth_grant  @relation(fields: [grant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at])
+}
+
+model oauth_access_token {
+  token_hash        String    @id
+  client_id         String
+  user_id           String
+  grant_id          String
+  refresh_family_id String?
+  scopes            String[]
+  resource          String
+  expires_at        DateTime  @db.Timestamptz
+  revoked_at        DateTime? @db.Timestamptz
+  created_at        DateTime  @default(now()) @db.Timestamptz
+
+  client oauth_client @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   user         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  grant  oauth_grant  @relation(fields: [grant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at])
+  @@index([refresh_family_id])
+}
+
+model oauth_refresh_token {
+  token_hash String    @id
+  client_id  String
+  user_id    String
+  grant_id   String
+  family_id  String
+  scopes     String[]
+  resource   String
+  expires_at DateTime  @db.Timestamptz
+  used_at    DateTime? @db.Timestamptz
+  revoked_at DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  client oauth_client @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user   user         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  grant  oauth_grant  @relation(fields: [grant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([family_id])
+  @@index([expires_at])
+}
+
+model public_share {
+  id         Int       @id @default(autoincrement())
+  user_id    String
+  slug       String    @unique
+  expires_at DateTime? @db.Timestamptz
+  created_at DateTime  @default(now()) @db.Timestamptz
+
+  // Privacy settings
+  show_map          Boolean @default(true)
+  show_stats        Boolean @default(false)
+  show_journey_list Boolean @default(false)
+
+  // Journey filtering
+  date_from String? // YYYY-MM-DD
+  date_to   String? // YYYY-MM-DD
+
+  // Data privacy settings
+  show_train_numbers Boolean @default(true)
+  show_operators     Boolean @default(true)
+  show_train         Boolean @default(false)
+  show_times         Boolean @default(false)
+  show_tracks        Boolean @default(false)
+  show_dates         Boolean @default(true)
+  show_seat          Boolean @default(false)
+
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([slug])
+  @@index([user_id])
+}
+
+model custom_field_definition {
+  id Int @id @default(autoincrement())
+
+  /// @kyselyType('journey' | 'journey_passenger')
+  entity_type String
+  key         String
+  label       String
+  description String?
+
+  /// @kyselyType('text' | 'textarea' | 'number' | 'boolean' | 'date' | 'select' | 'multi-select' | 'station' | 'operator' | 'train')
+  field_type String
+
+  required        Boolean @default(false)
+  active          Boolean @default(true)
+  order           Int     @default(0)
+  default_value   Json?
+  options         Json?
+  validation_json Json?
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  values custom_field_value[]
+
+  @@unique([entity_type, key])
+  @@index([entity_type, active, order])
+}
+
+model custom_field_value {
+  id Int @id @default(autoincrement())
+
+  field_id Int
+  field    custom_field_definition @relation(fields: [field_id], references: [id], onDelete: Cascade)
+
+  /// @kyselyType('journey' | 'journey_passenger')
+  entity_type String
+  entity_id   String
+  value       Json
+
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  @@unique([field_id, entity_type, entity_id])
+  @@index([entity_type, entity_id])
+}

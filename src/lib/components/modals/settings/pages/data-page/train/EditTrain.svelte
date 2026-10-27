@@ -1,0 +1,73 @@
+<script lang="ts">
+  import { SquarePen } from '@o7/icon/lucide';
+  import { toast } from 'svelte-sonner';
+  import { defaults, type Infer, superForm } from 'sveltekit-superforms';
+  import { zod4 as zod } from 'sveltekit-superforms/adapters';
+
+  import TrainFormFields from './TrainFormFields.svelte';
+
+  import { Button } from '$lib/components/ui/button';
+  import {
+    Modal,
+    ModalBody,
+    ModalBreadcrumbHeader,
+  } from '$lib/components/ui/modal';
+  import * as Form from '$lib/components/ui/form';
+  import type { Train } from '$lib/db/types';
+  import { trpc } from '$lib/trpc';
+  import { trainSchema } from '$lib/zod/train';
+
+  let {
+    train,
+  }: {
+    train: Train;
+  } = $props();
+
+  let open = $state(false);
+
+  const form = superForm(
+    defaults<Infer<typeof trainSchema>>(train, zod(trainSchema)),
+    {
+      dataType: 'json',
+      id: Math.random().toString(36).substring(7),
+      validators: zod(trainSchema),
+      onUpdated({ form }) {
+        if (form.message) {
+          if (form.message.type === 'success') {
+            trpc.train.list.utils.invalidate();
+            open = false;
+            return void toast.success(form.message.text);
+          }
+          toast.error(form.message.text);
+        }
+      },
+    },
+  );
+  const { enhance, submitting, tainted } = form;
+</script>
+
+<Button variant="outline" size="icon" onclick={() => (open = true)}>
+  <SquarePen size={16} />
+</Button>
+
+<Modal
+  bind:open
+  dismissal="form"
+  dirty={form.isTainted($tainted)}
+  busy={$submitting}
+  onDiscard={() => form.reset()}
+  class="max-w-lg"
+>
+  <ModalBreadcrumbHeader section="Train" title="Edit train" icon={SquarePen} />
+  <ModalBody>
+    <form
+      method="POST"
+      action="/api/train/save/form"
+      use:enhance
+      class="grid gap-4"
+    >
+      <TrainFormFields {form} />
+      <Form.Button>Save</Form.Button>
+    </form>
+  </ModalBody>
+</Modal>

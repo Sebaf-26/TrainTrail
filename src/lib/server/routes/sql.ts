@@ -1,0 +1,17 @@
+import { z } from 'zod';
+
+import { pool } from '$lib/db';
+import { permissionProcedure, router } from '$lib/server/trpc';
+
+export const sqlRouter = router({
+  execute: permissionProcedure('tools.sql.execute')
+    .input(z.string())
+    .query(async ({ input }) => {
+      try {
+        const res = await pool.query(input);
+        return { cols: res.fields.map((f) => f.name), rows: res.rows };
+      } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Query failed' };
+      }
+    }),
+});

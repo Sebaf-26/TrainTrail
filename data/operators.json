@@ -1,0 +1,448 @@
+[
+  {
+    "id": "amtrak",
+    "name": "Amtrak",
+    "code": null
+  },
+  {
+    "id": "arst",
+    "name": "ARST",
+    "code": "ARST"
+  },
+  {
+    "id": "atac",
+    "name": "ATAC",
+    "code": "ATAC"
+  },
+  {
+    "id": "avanti-west-coast",
+    "name": "Avanti West Coast",
+    "code": null
+  },
+  {
+    "id": "bdz",
+    "name": "BDŽ",
+    "code": "BDŽ"
+  },
+  {
+    "id": "bls",
+    "name": "BLS",
+    "code": "BLS"
+  },
+  {
+    "id": "ceske-drahy",
+    "name": "České dráhy",
+    "code": "ČD"
+  },
+  {
+    "id": "cfl",
+    "name": "CFL",
+    "code": "CFL"
+  },
+  {
+    "id": "cfr-calatori",
+    "name": "CFR Călători",
+    "code": "CFR"
+  },
+  {
+    "id": "china-railway",
+    "name": "China Railway",
+    "code": null
+  },
+  {
+    "id": "cp-comboios-de-portugal",
+    "name": "CP Comboios de Portugal",
+    "code": "CP"
+  },
+  {
+    "id": "crosscountry",
+    "name": "CrossCountry",
+    "code": null
+  },
+  {
+    "id": "db-fernverkehr",
+    "name": "DB Fernverkehr",
+    "code": null
+  },
+  {
+    "id": "db-regio",
+    "name": "DB Regio",
+    "code": null
+  },
+  {
+    "id": "deutsche-bahn",
+    "name": "Deutsche Bahn",
+    "code": "DB"
+  },
+  {
+    "id": "dsb",
+    "name": "DSB",
+    "code": "DSB"
+  },
+  {
+    "id": "eav",
+    "name": "EAV",
+    "code": "EAV"
+  },
+  {
+    "id": "eurostar",
+    "name": "Eurostar",
+    "code": null
+  },
+  {
+    "id": "euskotren",
+    "name": "Euskotren",
+    "code": null
+  },
+  {
+    "id": "ferrotramviaria",
+    "name": "Ferrotramviaria",
+    "code": null
+  },
+  {
+    "id": "ferrovie-appulo-lucane",
+    "name": "Ferrovie Appulo Lucane",
+    "code": "FAL"
+  },
+  {
+    "id": "ferrovie-del-sud-est",
+    "name": "Ferrovie del Sud Est",
+    "code": "FSE"
+  },
+  {
+    "id": "ferrovie-della-calabria",
+    "name": "Ferrovie della Calabria",
+    "code": "FdC"
+  },
+  {
+    "id": "fgc",
+    "name": "FGC",
+    "code": "FGC"
+  },
+  {
+    "id": "flixtrain",
+    "name": "FlixTrain",
+    "code": null
+  },
+  {
+    "id": "great-northern",
+    "name": "Great Northern",
+    "code": null
+  },
+  {
+    "id": "gtt",
+    "name": "GTT",
+    "code": "GTT"
+  },
+  {
+    "id": "gwr",
+    "name": "GWR",
+    "code": "GWR"
+  },
+  {
+    "id": "heathrow-express",
+    "name": "Heathrow Express",
+    "code": null
+  },
+  {
+    "id": "hull-trains",
+    "name": "Hull Trains",
+    "code": null
+  },
+  {
+    "id": "hz-putnicki-prijevoz",
+    "name": "HŽ Putnički prijevoz",
+    "code": "HŽPP"
+  },
+  {
+    "id": "indian-railways",
+    "name": "Indian Railways",
+    "code": null
+  },
+  {
+    "id": "intercites",
+    "name": "Intercités",
+    "code": null
+  },
+  {
+    "id": "irish-rail",
+    "name": "Irish Rail",
+    "code": null
+  },
+  {
+    "id": "iryo",
+    "name": "Iryo",
+    "code": null
+  },
+  {
+    "id": "israel-railways",
+    "name": "Israel Railways",
+    "code": null
+  },
+  {
+    "id": "italo",
+    "name": "Italo",
+    "code": null
+  },
+  {
+    "id": "jr-central",
+    "name": "JR Central",
+    "code": null
+  },
+  {
+    "id": "jr-east",
+    "name": "JR East",
+    "code": null
+  },
+  {
+    "id": "jr-kyushu",
+    "name": "JR Kyushu",
+    "code": null
+  },
+  {
+    "id": "jr-west",
+    "name": "JR West",
+    "code": null
+  },
+  {
+    "id": "korail",
+    "name": "Korail",
+    "code": null
+  },
+  {
+    "id": "leo-express",
+    "name": "Leo Express",
+    "code": null
+  },
+  {
+    "id": "lner",
+    "name": "LNER",
+    "code": "LNER"
+  },
+  {
+    "id": "lumo",
+    "name": "Lumo",
+    "code": null
+  },
+  {
+    "id": "lyria",
+    "name": "Lyria",
+    "code": null
+  },
+  {
+    "id": "matterhorn-gotthard-bahn",
+    "name": "Matterhorn Gotthard Bahn",
+    "code": "MGB"
+  },
+  {
+    "id": "mav",
+    "name": "MÁV",
+    "code": "MÁV"
+  },
+  {
+    "id": "nightjet",
+    "name": "Nightjet",
+    "code": null
+  },
+  {
+    "id": "nmbs-sncb",
+    "name": "NMBS/SNCB",
+    "code": null
+  },
+  {
+    "id": "northern",
+    "name": "Northern",
+    "code": null
+  },
+  {
+    "id": "ns",
+    "name": "NS",
+    "code": "NS"
+  },
+  {
+    "id": "obb",
+    "name": "ÖBB",
+    "code": "ÖBB"
+  },
+  {
+    "id": "oncf",
+    "name": "ONCF",
+    "code": "ONCF"
+  },
+  {
+    "id": "ouigo",
+    "name": "OUIGO",
+    "code": null
+  },
+  {
+    "id": "ouigo-espana",
+    "name": "OUIGO España",
+    "code": null
+  },
+  {
+    "id": "pkp-intercity",
+    "name": "PKP Intercity",
+    "code": null
+  },
+  {
+    "id": "regiojet",
+    "name": "RegioJet",
+    "code": null
+  },
+  {
+    "id": "renfe",
+    "name": "Renfe",
+    "code": null
+  },
+  {
+    "id": "rhatische-bahn",
+    "name": "Rhätische Bahn",
+    "code": "RhB"
+  },
+  {
+    "id": "rzd",
+    "name": "RZD",
+    "code": "RZD"
+  },
+  {
+    "id": "sad",
+    "name": "SAD",
+    "code": "SAD"
+  },
+  {
+    "id": "sbb-cff-ffs",
+    "name": "SBB CFF FFS",
+    "code": "SBB"
+  },
+  {
+    "id": "scotrail",
+    "name": "ScotRail",
+    "code": null
+  },
+  {
+    "id": "sj",
+    "name": "SJ",
+    "code": "SJ"
+  },
+  {
+    "id": "slovenske-zeleznice",
+    "name": "Slovenske železnice",
+    "code": "SŽ"
+  },
+  {
+    "id": "sncf-voyageurs",
+    "name": "SNCF Voyageurs",
+    "code": "SNCF"
+  },
+  {
+    "id": "southeastern",
+    "name": "Southeastern",
+    "code": null
+  },
+  {
+    "id": "southern",
+    "name": "Southern",
+    "code": null
+  },
+  {
+    "id": "srbija-voz",
+    "name": "Srbija voz",
+    "code": null
+  },
+  {
+    "id": "sudostbahn",
+    "name": "Südostbahn",
+    "code": "SOB"
+  },
+  {
+    "id": "taiwan-high-speed-rail",
+    "name": "Taiwan High Speed Rail",
+    "code": "THSR"
+  },
+  {
+    "id": "tcdd",
+    "name": "TCDD",
+    "code": "TCDD"
+  },
+  {
+    "id": "ter",
+    "name": "TER",
+    "code": "TER"
+  },
+  {
+    "id": "tgv-inoui",
+    "name": "TGV INOUI",
+    "code": null
+  },
+  {
+    "id": "thalys",
+    "name": "Thalys",
+    "code": null,
+    "defunct": true
+  },
+  {
+    "id": "thameslink",
+    "name": "Thameslink",
+    "code": null
+  },
+  {
+    "id": "tilo",
+    "name": "TILO",
+    "code": "TILO"
+  },
+  {
+    "id": "transilien",
+    "name": "Transilien",
+    "code": null
+  },
+  {
+    "id": "transpennine-express",
+    "name": "TransPennine Express",
+    "code": null
+  },
+  {
+    "id": "transport-for-wales",
+    "name": "Transport for Wales",
+    "code": null
+  },
+  {
+    "id": "trenitalia",
+    "name": "Trenitalia",
+    "code": null
+  },
+  {
+    "id": "trenord",
+    "name": "Trenord",
+    "code": null
+  },
+  {
+    "id": "via-rail",
+    "name": "VIA Rail",
+    "code": null
+  },
+  {
+    "id": "vr",
+    "name": "VR",
+    "code": "VR"
+  },
+  {
+    "id": "vy",
+    "name": "Vy",
+    "code": "Vy"
+  },
+  {
+    "id": "westbahn",
+    "name": "WESTbahn",
+    "code": null
+  },
+  {
+    "id": "zentralbahn",
+    "name": "Zentralbahn",
+    "code": null
+  },
+  {
+    "id": "zssk",
+    "name": "ZSSK",
+    "code": "ZSSK"
+  }
+]

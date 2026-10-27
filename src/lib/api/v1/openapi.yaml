@@ -1,0 +1,1779 @@
+openapi: 3.1.0
+info:
+  title: TrainTrail API v1
+  version: 1.0.0
+  description: >-
+    The versioned public API for TrainTrail integrations and custom clients. OAuth access tokens and
+    personal API keys use the same bearer header. Credential scopes are a ceiling over the user's
+    current RBAC permissions. Each operation lists the scopes every call needs under `security`;
+    `x-conditional-scopes` lists scopes needed only for some targets or payloads, such as another
+    user's journey.
+servers:
+  - url: '{protocol}://{domain}'
+    description: Your TrainTrail instance.
+    variables:
+      protocol:
+        enum: [http, https]
+        default: https
+      domain:
+        default: your-instance.example
+  - url: https://example-instance.com
+    description: Example TrainTrail instance.
+security:
+  - bearerAuth: []
+tags:
+  - name: Discovery
+    description: API metadata and the connected identity.
+  - name: Journeys
+    description: Journeys, tracks, exports, and statistics.
+  - name: Reference data
+    description: Stations, operators, and train models.
+  - name: Personal data
+    description: Preferences, visited countries, and shares.
+  - name: Administration
+    description: Users and RBAC roles.
+paths:
+  /api/v1:
+    get:
+      tags: [Discovery]
+      operationId: api-v1-discovery
+      security: []
+      summary: Discover API capabilities
+      responses:
+        '200':
+          description: API versions, authentication methods, MCP endpoint, and supported scopes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Discovery'
+  /api/v1/me:
+    get:
+      tags: [Discovery]
+      operationId: api-v1-get-me
+      security:
+        - bearerAuth: [profile.read]
+      summary: Get the authenticated profile
+      responses:
+        '200':
+          description: Profile, role, effective permissions, and credential scopes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/journeys:
+    get:
+      tags: [Journeys]
+      operationId: api-v1-list-journeys
+      security:
+        - bearerAuth: [journey.read.own]
+      summary: List visible journeys
+      description: >-
+        Returns journeys in deterministic descending order by journey date, then descending ID.
+        Results are cursor-paginated. Start without a cursor, then pass the returned
+        `page.nextCursor` value unchanged as `cursor` to fetch the next page. When `page.nextCursor`
+        is `null`, the response is the last page. Cursors are opaque and must not be decoded or
+        constructed by clients.
+      x-conditional-scopes: [journey.read.any]
+      parameters:
+        - $ref: '#/components/parameters/JourneyScope'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Cursor-paginated journeys.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Journeys]
+      operationId: api-v1-create-journey
+      security:
+        - bearerAuth: [journey.create.own]
+      summary: Create a journey
+      x-conditional-scopes:
+        - journey.create.any
+        - journey.passengers.manage.own
+        - journey.passengers.manage.any
+        - tracks.write
+      requestBody:
+        $ref: '#/components/requestBodies/Journey'
+      responses:
+        '201':
+          description: Journey created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /api/v1/journeys/{id}:
+    parameters:
+      - $ref: '#/components/parameters/JourneyId'
+    get:
+      tags: [Journeys]
+      operationId: api-v1-get-journey
+      security:
+        - bearerAuth: [journey.read.own]
+      summary: Get a visible journey
+      x-conditional-scopes: [journey.read.any]
+      responses:
+        '200':
+          description: Journey details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Journeys]
+      operationId: api-v1-update-journey
+      security:
+        - bearerAuth: [journey.update.own]
+      summary: Replace a journey
+      x-conditional-scopes:
+        - journey.update.any
+        - journey.passengers.manage.own
+        - journey.passengers.manage.any
+        - tracks.write
+      requestBody:
+        $ref: '#/components/requestBodies/Journey'
+      responses:
+        '200':
+          description: Updated journey.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JourneyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [Journeys]
+      operationId: api-v1-delete-journey
+      security:
+        - bearerAuth: [journey.delete.own]
+      summary: Delete a journey
+      x-conditional-scopes: [journey.delete.any]
+      responses:
+        '204':
+          description: Journey deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/journeys/{id}/track:
+    parameters:
+      - $ref: '#/components/parameters/JourneyId'
+    get:
+      tags: [Journeys]
+      operationId: api-v1-get-journey-track
+      security:
+        - bearerAuth: [tracks.read, journey.read.own]
+      summary: Get a journey track
+      x-conditional-scopes: [journey.read.any]
+      responses:
+        '200':
+          description: Track or null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Journeys]
+      operationId: api-v1-set-journey-track
+      security:
+        - bearerAuth: [tracks.write, journey.update.own]
+      summary: Replace a journey track
+      x-conditional-scopes: [journey.update.any]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackInput'
+      responses:
+        '200':
+          description: Saved track.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [Journeys]
+      operationId: api-v1-delete-journey-track
+      security:
+        - bearerAuth: [tracks.write, journey.update.own]
+      summary: Delete a journey track
+      x-conditional-scopes: [journey.update.any]
+      responses:
+        '204':
+          description: Track deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/journeys/export:
+    get:
+      tags: [Journeys]
+      operationId: api-v1-export-journeys
+      security:
+        - bearerAuth: [journey.export.own]
+      summary: Export visible journeys
+      x-conditional-scopes: [journey.export.any]
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, yaml, yml]
+            default: json
+        - $ref: '#/components/parameters/JourneyScope'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: TrainTrail backup.
+          content:
+            application/json:
+              schema:
+                type: object
+            application/yaml:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/stats:
+    get:
+      tags: [Journeys]
+      operationId: api-v1-get-stats
+      security:
+        - bearerAuth: [stats.read, journey.read.own]
+      summary: Get journey statistics
+      x-conditional-scopes: [journey.read.any]
+      parameters:
+        - $ref: '#/components/parameters/JourneyScope'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/stations:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-search-stations
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Search stations
+      description: >-
+        Matches the station name, code, UIC code or ViaggiaTreno id. Returns a bounded set of best
+        matches and is not paginated; `page.nextCursor` is always null. Narrow the query to reach
+        other results.
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Matching stations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/stations/{id}:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-get-station
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Get a station
+      parameters:
+        - $ref: '#/components/parameters/ReferenceId'
+      responses:
+        '200':
+          description: Station.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/operators:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-search-operators
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Search operators
+      description: >-
+        Returns a bounded set of best matches and is not paginated; `page.nextCursor` is always
+        null. Narrow the query to reach other results.
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Matching operators.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/operators/{id}:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-get-operator
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Get an operator
+      parameters:
+        - $ref: '#/components/parameters/ReferenceId'
+      responses:
+        '200':
+          description: Operator.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/train:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-search-train
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Search train models
+      description: >-
+        Returns a bounded set of best matches and is not paginated; `page.nextCursor` is always
+        null. Narrow the query to reach other results.
+      parameters:
+        - $ref: '#/components/parameters/SearchQuery'
+      responses:
+        '200':
+          description: Matching train models.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainCollection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/train/{id}:
+    get:
+      tags: [Reference data]
+      operationId: api-v1-get-train
+      security:
+        - bearerAuth: [reference_data.read]
+      summary: Get a train model
+      parameters:
+        - $ref: '#/components/parameters/ReferenceId'
+      responses:
+        '200':
+          description: Train model.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/custom-fields:
+    get:
+      tags: [Personal data]
+      operationId: api-v1-list-custom-fields
+      security:
+        - bearerAuth: [custom_fields.read]
+      summary: List active custom-field definitions
+      responses:
+        '200':
+          description: Definitions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/preferences:
+    put:
+      tags: [Personal data]
+      operationId: api-v1-update-preferences
+      security:
+        - bearerAuth: [preferences.write]
+      summary: Update personal preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Preferences'
+      responses:
+        '200':
+          description: Preferences updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/visited-countries:
+    get:
+      tags: [Personal data]
+      operationId: api-v1-list-visited-countries
+      security:
+        - bearerAuth: [visited_countries.read]
+      summary: List visited countries
+      responses:
+        '200':
+          description: Visited countries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitedCountriesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [Personal data]
+      operationId: api-v1-set-visited-country
+      security:
+        - bearerAuth: [visited_countries.write]
+      summary: Set a visited country
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitedCountryInput'
+      responses:
+        '200':
+          description: Saved country.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitedCountryResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Personal data]
+      operationId: api-v1-remove-visited-country
+      security:
+        - bearerAuth: [visited_countries.write]
+      summary: Remove a visited country
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 2
+      responses:
+        '204':
+          description: Country removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/shares:
+    get:
+      tags: [Personal data]
+      operationId: api-v1-list-shares
+      security:
+        - bearerAuth: [shares.read]
+      summary: List public shares
+      responses:
+        '200':
+          description: Shares.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Personal data]
+      operationId: api-v1-create-share
+      security:
+        - bearerAuth: [shares.write]
+      summary: Create a public share
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareInput'
+      responses:
+        '201':
+          description: Created share.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/shares/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ReferenceId'
+    put:
+      tags: [Personal data]
+      operationId: api-v1-update-share
+      security:
+        - bearerAuth: [shares.write]
+      summary: Replace a public share
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareInput'
+      responses:
+        '200':
+          description: Updated share.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Personal data]
+      operationId: api-v1-delete-share
+      security:
+        - bearerAuth: [shares.write]
+      summary: Delete a public share
+      responses:
+        '204':
+          description: Share deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/users:
+    get:
+      tags: [Administration]
+      operationId: api-v1-list-users
+      security:
+        - bearerAuth: [users.directory.read]
+      summary: List the user directory
+      responses:
+        '200':
+          description: Visible users.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/roles:
+    get:
+      tags: [Administration]
+      operationId: api-v1-list-roles
+      security:
+        - bearerAuth: [roles.manage]
+      summary: List access roles
+      responses:
+        '200':
+          description: Roles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Administration]
+      operationId: api-v1-create-role
+      security:
+        - bearerAuth: [roles.manage]
+      summary: Create an access role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '201':
+          description: Role created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/roles/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    put:
+      tags: [Administration]
+      operationId: api-v1-update-role
+      security:
+        - bearerAuth: [roles.manage]
+      summary: Replace an access role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '200':
+          description: Role updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdatedResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [Administration]
+      operationId: api-v1-delete-role
+      security:
+        - bearerAuth: [roles.manage]
+      summary: Delete an access role
+      responses:
+        '204':
+          description: Role deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key or OAuth 2.1 access token
+      description: >-
+        Send `Authorization: Bearer <credential>`. Create API keys in TrainTrail Security settings.
+        OAuth clients use authorization code with PKCE S256 and a resource identifier matching
+        `/api/v1`.
+  parameters:
+    JourneyId:
+      name: id
+      in: path
+      required: true
+      description: Journey ID.
+      schema:
+        type: integer
+        minimum: 1
+    ReferenceId:
+      name: id
+      in: path
+      required: true
+      description: Resource ID.
+      schema:
+        type: integer
+        minimum: 1
+    JourneyScope:
+      name: scope
+      in: query
+      description: Journey ownership scope.
+      schema:
+        type: string
+        enum: [mine, user, all]
+        default: mine
+    UserId:
+      name: userId
+      in: query
+      description: User ID required when scope=user.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: >-
+        An opaque pagination cursor returned in `page.nextCursor`. Pass it unchanged to retrieve the
+        next page. Omit it for the first page. A `null` `page.nextCursor` means there are no more
+        pages.
+      schema:
+        type: string
+    SearchQuery:
+      name: query
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  requestBodies:
+    Journey:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/JourneyInput'
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid bearer credential.
+      headers:
+        WWW-Authenticate:
+          description: Bearer challenge and OAuth resource metadata.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Current RBAC authority or credential scope is insufficient.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found or not visible.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationFailed:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The request conflicts with an existing resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - bad_request
+                - conflict
+                - forbidden
+                - insufficient_scope
+                - internal_error
+                - invalid_json
+                - not_found
+                - unauthorized
+                - validation_failed
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+    Discovery:
+      type: object
+      required:
+        - api
+        - instance
+        - authentication
+        - mcp
+        - scopes
+      properties:
+        api:
+          type: object
+          additionalProperties: true
+        instance:
+          type: object
+          additionalProperties: true
+        authentication:
+          type: object
+          additionalProperties: true
+        mcp:
+          type: object
+          additionalProperties: true
+        scopes:
+          type: array
+          items:
+            type: object
+            required: [name, description]
+            properties:
+              name:
+                type: string
+                description: Scope name
+                enum:
+                  - journey.read.own
+                  - journey.read.any
+                  - journey.create.own
+                  - journey.create.any
+                  - journey.update.own
+                  - journey.update.any
+                  - journey.delete.own
+                  - journey.delete.any
+                  - journey.export.own
+                  - journey.export.any
+                  - journey.passengers.manage.own
+                  - journey.passengers.manage.any
+                  - users.directory.read
+                  - roles.manage
+                  - profile.read
+                  - preferences.write
+                  - reference_data.read
+                  - custom_fields.read
+                  - stats.read
+                  - tracks.read
+                  - tracks.write
+                  - visited_countries.read
+                  - visited_countries.write
+                  - shares.read
+                  - shares.write
+              description:
+                type: string
+    Page:
+      type: object
+      required: [nextCursor]
+      properties:
+        nextCursor:
+          type: [string, 'null']
+          description: >-
+            The opaque cursor for the next page. Send this value as the `cursor` query parameter.
+            `null` indicates the last page.
+    User:
+      type: object
+      required: [id, username, displayName]
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required: [role, isOwner, permissions, credential]
+          properties:
+            role:
+              type: [object, 'null']
+              properties:
+                id:
+                  type: [string, 'null']
+                name:
+                  type: string
+            isOwner:
+              type: boolean
+            permissions:
+              type: array
+              items:
+                type: string
+            credential:
+              type: object
+              required: [kind, scopes]
+              properties:
+                kind:
+                  type: string
+                  enum: [apiKey, oauth]
+                scopes:
+                  type: array
+                  items:
+                    type: string
+    ProfileResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Profile'
+    Station:
+      type: object
+      required:
+        - id
+        - code
+        - uic
+        - viaggiatrenoId
+        - name
+        - municipality
+        - latitude
+        - longitude
+        - timezone
+        - type
+        - continent
+        - country
+        - custom
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          description: >-
+            Unique station code. The Trainline station id for synced stations,
+            `custom-<random>` for custom stations.
+        uic:
+          type: [string, 'null']
+          description: UIC location code, when known.
+        viaggiatrenoId:
+          type: [string, 'null']
+          description: ViaggiaTreno (Trenitalia/RFI) station id, when known.
+        name:
+          type: string
+        municipality:
+          type: [string, 'null']
+        latitude:
+          type: number
+        longitude:
+          type: number
+        timezone:
+          type: string
+        type:
+          type: string
+          enum:
+            - main
+            - station
+        continent:
+          type: string
+          enum:
+            - AF
+            - AS
+            - EU
+            - NA
+            - OC
+            - SA
+            - AN
+        country:
+          type: string
+        custom:
+          type: boolean
+    JourneyStation:
+      type: object
+      description: The station shape embedded in a journey, with renamed coordinates.
+      required:
+        - id
+        - code
+        - uic
+        - viaggiatrenoId
+        - name
+        - municipality
+        - latitude
+        - longitude
+        - timezone
+        - type
+        - continent
+        - country
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        uic:
+          type: [string, 'null']
+        viaggiatrenoId:
+          type: [string, 'null']
+        name:
+          type: string
+        municipality:
+          type: [string, 'null']
+        latitude:
+          type: number
+        longitude:
+          type: number
+        timezone:
+          type: string
+        type:
+          type: string
+          enum:
+            - main
+            - station
+        continent:
+          type: string
+          enum:
+            - AF
+            - AS
+            - EU
+            - NA
+            - OC
+            - SA
+            - AN
+        country:
+          type: string
+    Operator:
+      type: object
+      required:
+        - id
+        - name
+        - code
+        - iconPath
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: [string, 'null']
+          description: Short operator label such as `FS` or `SNCF`.
+        iconPath:
+          type: [string, 'null']
+    Train:
+      type: object
+      required: [id, name, code]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: [string, 'null']
+    Passenger:
+      type: object
+      required:
+        - id
+        - user
+        - guestName
+        - seat
+        - coach
+        - seatNumber
+        - seatClass
+        - journeyReason
+      properties:
+        id:
+          type: integer
+        user:
+          anyOf:
+            - $ref: '#/components/schemas/User'
+            - type: 'null'
+        guestName:
+          type: [string, 'null']
+        seat:
+          type: [string, 'null']
+          enum:
+            - window
+            - aisle
+            - table
+            - standing
+            - other
+        coach:
+          type: [string, 'null']
+          description: Coach number or name.
+        seatNumber:
+          type: [string, 'null']
+        seatClass:
+          type: [string, 'null']
+          enum:
+            - second
+            - first
+            - business
+            - premium
+            - sleeper
+        journeyReason:
+          type: [string, 'null']
+          enum: [leisure, business, commute, other]
+    PassengerInput:
+      type: object
+      description: Exactly one of userId and guestName is required.
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        userId:
+          type: [string, 'null']
+        guestName:
+          type: [string, 'null']
+          maxLength: 100
+        seat:
+          type: [string, 'null']
+          enum:
+            - window
+            - aisle
+            - table
+            - standing
+            - other
+        coach:
+          type: [string, 'null']
+          maxLength: 20
+        seatNumber:
+          type: [string, 'null']
+          maxLength: 20
+        seatClass:
+          type: [string, 'null']
+          enum:
+            - second
+            - first
+            - business
+            - premium
+            - sleeper
+        journeyReason:
+          type: [string, 'null']
+          enum: [leisure, business, commute, other]
+        customFields:
+          type: object
+          additionalProperties: true
+    TrackSummary:
+      type: object
+      required: [pointCount, updatedAt, sourceFormat, sourceName]
+      properties:
+        pointCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        sourceFormat:
+          type: string
+        sourceName:
+          type: [string, 'null']
+    TrackInput:
+      type: object
+      required: [coordinates, sourceFormat]
+      properties:
+        coordinates:
+          type: array
+          minItems: 2
+          maxItems: 100000
+          items:
+            type: array
+            minItems: 2
+            maxItems: 3
+            items:
+              type: number
+        sourceFormat:
+          type: string
+          enum: [gpx, kml, csv, readsb]
+        sourceName:
+          type: [string, 'null']
+          maxLength: 255
+        times:
+          type: array
+          items:
+            type: integer
+        groundSpeedKt:
+          type: array
+          items:
+            type: number
+        trackDeg:
+          type: array
+          items:
+            type: number
+        ground:
+          type: array
+          items:
+            type: boolean
+        estimated:
+          type: array
+          items:
+            type: boolean
+    Track:
+      allOf:
+        - $ref: '#/components/schemas/TrackInput'
+        - type: object
+          required: [journeyId, pointCount, createdAt, updatedAt]
+          properties:
+            journeyId:
+              type: integer
+            pointCount:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    # Server-rendered aliases: `from`/`to` carry latitude and longitude where
+    # the stored record uses `lat`/`lon`, so the journey shape is spelled out
+    # separately from `Station` rather than referenced.
+    Journey:
+      type: object
+      required:
+        - id
+        - date
+        - datePrecision
+        - from
+        - to
+        - operator
+        - train
+        - passengers
+        - track
+      description: A stored journey, or null field, joined to its reference data.
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        datePrecision:
+          type: string
+          enum: [day, month, year]
+        departure:
+          type: [string, 'null']
+          format: date-time
+        arrival:
+          type: [string, 'null']
+          format: date-time
+        departureScheduled:
+          type: [string, 'null']
+          format: date-time
+        arrivalScheduled:
+          type: [string, 'null']
+          format: date-time
+        duration:
+          type: [integer, 'null']
+        departurePlatform:
+          type: [string, 'null']
+        arrivalPlatform:
+          type: [string, 'null']
+        trainNumber:
+          type: [string, 'null']
+        unitNumber:
+          type: [string, 'null']
+        note:
+          type: [string, 'null']
+        from:
+          anyOf:
+            - $ref: '#/components/schemas/JourneyStation'
+            - type: 'null'
+        to:
+          anyOf:
+            - $ref: '#/components/schemas/JourneyStation'
+            - type: 'null'
+        operator:
+          anyOf:
+            - $ref: '#/components/schemas/Operator'
+            - type: 'null'
+        train:
+          anyOf:
+            - $ref: '#/components/schemas/Train'
+            - type: 'null'
+        passengers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Passenger'
+        track:
+          anyOf:
+            - $ref: '#/components/schemas/TrackSummary'
+            - type: 'null'
+    JourneyInput:
+      type: object
+      required: [date, fromId, toId, passengers]
+      properties:
+        date:
+          type: string
+          format: date
+        datePrecision:
+          type: string
+          enum: [day, month, year]
+          default: day
+        departure:
+          type: [string, 'null']
+          format: date-time
+        arrival:
+          type: [string, 'null']
+          format: date-time
+        departureScheduled:
+          type: [string, 'null']
+          format: date-time
+        arrivalScheduled:
+          type: [string, 'null']
+          format: date-time
+        duration:
+          type: [integer, 'null']
+          minimum: 0
+        departurePlatform:
+          type: [string, 'null']
+          maxLength: 500
+        arrivalPlatform:
+          type: [string, 'null']
+          maxLength: 500
+        trainNumber:
+          type: [string, 'null']
+          maxLength: 500
+        unitNumber:
+          type: [string, 'null']
+          maxLength: 500
+        note:
+          type: [string, 'null']
+          maxLength: 10000
+        fromId:
+          type: integer
+          minimum: 1
+        toId:
+          type: integer
+          minimum: 1
+        trainId:
+          type: [integer, 'null']
+          minimum: 1
+        operatorId:
+          type: [integer, 'null']
+          minimum: 1
+        passengers:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/PassengerInput'
+        track:
+          anyOf:
+            - $ref: '#/components/schemas/TrackInput'
+            - type: 'null'
+        customFields:
+          type: object
+          additionalProperties: true
+    JourneyResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Journey'
+    JourneyCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Journey'
+        page:
+          $ref: '#/components/schemas/Page'
+    TrackResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          anyOf:
+            - $ref: '#/components/schemas/Track'
+            - type: 'null'
+    StationResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Station'
+    OperatorResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Operator'
+    TrainResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Train'
+    StationCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Station'
+        page:
+          $ref: '#/components/schemas/Page'
+    OperatorCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Operator'
+        page:
+          $ref: '#/components/schemas/Page'
+    TrainCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Train'
+        page:
+          $ref: '#/components/schemas/Page'
+    Stats:
+      type: object
+      required:
+        - journeys
+        - distanceKm
+        - durationSeconds
+        - stations
+        - topOperator
+        - topStation
+        - topTrain
+        - topRoute
+      properties:
+        journeys:
+          type: integer
+        distanceKm:
+          type: integer
+        durationSeconds:
+          type: integer
+        stations:
+          type: integer
+        topOperator:
+          type: [object, 'null']
+        topStation:
+          type: [object, 'null']
+        topTrain:
+          type: [object, 'null']
+        topRoute:
+          type: [object, 'null']
+    StatsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Stats'
+    Preferences:
+      type: object
+      properties:
+        distanceUnit:
+          type: string
+          enum: [km, mi]
+        timeFormat:
+          type: string
+          enum: [12h, 24h, auto]
+        dateFormat:
+          type: string
+          enum: [iso, us, eu, auto]
+        weekStartsOn:
+          type: string
+          enum: [mon, sun, auto]
+        journeyTimeDisplay:
+          type: string
+          enum: [station, utc, system]
+    VisitedCountryInput:
+      type: object
+      required: [code, status]
+      properties:
+        code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        status:
+          type: string
+          enum: [lived, visited, layover, wishlist]
+        note:
+          type: [string, 'null']
+          maxLength: 1000
+    VisitedCountry:
+      type: object
+      required: [id, code, status, note]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          minLength: 2
+          maxLength: 2
+        status:
+          type: string
+          enum: [lived, visited, layover, wishlist]
+        note:
+          type: [string, 'null']
+    VisitedCountryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/VisitedCountry'
+    VisitedCountriesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisitedCountry'
+    ShareInput:
+      type: object
+      properties:
+        slug:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 50
+          pattern: ^[a-zA-Z0-9_-]+$
+          description: Public URL slug. Generated when omitted.
+        expiresAt:
+          type: [string, 'null']
+          format: date-time
+        showMap:
+          type: boolean
+        showStats:
+          type: boolean
+        showJourneyList:
+          type: boolean
+        dateFrom:
+          type: [string, 'null']
+        dateTo:
+          type: [string, 'null']
+        showTrainNumbers:
+          type: boolean
+        showOperators:
+          type: boolean
+        showTrain:
+          type: boolean
+        showTimes:
+          type: boolean
+        showTracks:
+          type: boolean
+        showDates:
+          type: boolean
+        showSeat:
+          type: boolean
+    Share:
+      allOf:
+        - $ref: '#/components/schemas/ShareInput'
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+    ShareResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/Share'
+    SharesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Share'
+    RoleInput:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+          maxLength: 50
+        description:
+          type: [string, 'null']
+          maxLength: 200
+        permissions:
+          type: array
+          items:
+            type: string
+    Role:
+      allOf:
+        - $ref: '#/components/schemas/RoleInput'
+        - type: object
+          required: [id, userCount, oauthMappingCount, isDefault]
+          properties:
+            id:
+              type: string
+            userCount:
+              type: integer
+            oauthMappingCount:
+              type: integer
+            isDefault:
+              type: boolean
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    UsersResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/User'
+            properties:
+              canManage:
+                type: boolean
+              roleId:
+                type: [string, 'null']
+              roleName:
+                type: [string, 'null']
+              isOwner:
+                type: boolean
+    RolesResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    CustomField:
+      type: object
+      required:
+        - id
+        - entityType
+        - key
+        - label
+        - fieldType
+        - required
+        - order
+      properties:
+        id:
+          type: integer
+        entityType:
+          type: string
+          enum: [journey, journey_passenger]
+        key:
+          type: string
+        label:
+          type: string
+        description:
+          type: [string, 'null']
+        fieldType:
+          type: string
+          enum:
+            - text
+            - textarea
+            - number
+            - boolean
+            - date
+            - select
+            - multi-select
+            - station
+            - operator
+            - train
+        required:
+          type: boolean
+        order:
+          type: integer
+        defaultValue:
+          {}
+        options:
+          {}
+    CustomFieldsResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomField'
+    CreatedResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [id]
+          properties:
+            id:
+              oneOf:
+                - type: string
+                - type: integer
+    UpdatedResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          additionalProperties: true
