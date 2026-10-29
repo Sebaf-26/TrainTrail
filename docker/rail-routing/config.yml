@@ -13,6 +13,9 @@ graphhopper:
         # Reversing costs 5 minutes.
         u_turn_costs: 300
         enable_uturn_times: true
+      # passenger.json is ours (in custom_models/); preferred_direction.json is
+      # built into OpenRailRouting. A file with a built-in name in our folder
+      # makes the engine refuse to start.
       custom_model_files: [passenger.json, preferred_direction.json]
 
   custom_models.directory: /app/custom_models
@@ -22,8 +25,9 @@ graphhopper:
   profiles_ch: []
   profiles_lm: []
 
-  # Only what the profile needs (plus road_environment for snap_preventions).
-  graph.encoded_values: road_environment,rail_access,rail_average_speed,railway_class,railway_service,preferred_direction
+  # The list of OpenRailRouting's own example configuration. It is more than
+  # passenger.json needs, but this combination is the one the project runs.
+  graph.encoded_values: gauge,voltage,electrified,frequency,road_environment,max_speed,rail_access,rail_average_speed,railway_class,railway_service,preferred_direction
 
   # Detached pieces of track smaller than this are dropped, so that a point is
   # not snapped onto a track that leads nowhere.
