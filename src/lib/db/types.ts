@@ -56,6 +56,8 @@ export type Journey = Omit<
   passengers: JourneyPassenger[];
   train: Train | null;
   operator: Operator | null;
+  /** Length along the rails in metres, when a route was computed for it. */
+  railDistanceM?: number | null;
 };
 export type JourneyTrack = Selectable<journey_track>;
 type CreateJourneyStation = Partial<Station>;

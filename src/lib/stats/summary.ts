@@ -1,5 +1,5 @@
 import type { Journey } from '$lib/db/types';
-import { distanceBetween } from '$lib/utils';
+import { journeyDistanceKm } from '$lib/utils';
 import { isCompletedJourney } from '$lib/utils/data/journey-timeline';
 
 export { isCompletedJourney };
@@ -82,13 +82,7 @@ export const computeJourneyStatsSummary = (
   const stationIds = new Set<string>();
 
   for (const journey of journeys) {
-    if (journey.from && journey.to) {
-      totalDistanceKm +=
-        distanceBetween(
-          [journey.from.lon, journey.from.lat],
-          [journey.to.lon, journey.to.lat],
-        ) / 1000;
-    }
+    totalDistanceKm += journeyDistanceKm(journey) ?? 0;
 
     if (journey.duration !== null) {
       totalDurationSeconds += journey.duration;

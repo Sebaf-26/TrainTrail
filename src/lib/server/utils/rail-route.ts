@@ -320,11 +320,16 @@ export const drawJourneyRoute = async (
     return { status: 'none' };
   }
 
-  await upsertJourneyTrackPrimitiveWithConnection(db, journeyId, {
-    coordinates: route.coordinates,
-    sourceFormat: 'rail',
-    sourceName: 'OpenRailRouting',
-  });
+  await upsertJourneyTrackPrimitiveWithConnection(
+    db,
+    journeyId,
+    {
+      coordinates: route.coordinates,
+      sourceFormat: 'rail',
+      sourceName: 'OpenRailRouting',
+    },
+    { lengthM: route.distance > 0 ? route.distance : null },
+  );
   log(
     'info',
     `${label}: drawn along the rails (${route.coordinates.length} points)`,

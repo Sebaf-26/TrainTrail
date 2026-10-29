@@ -145,7 +145,16 @@ export const listJourneyBaseQuery = (db: Kysely<DB>, userId?: string) => {
     )
     .select(({ ref }) => [train(db, ref('journey.trainId'))])
     .select(({ ref }) => [operator(db, ref('journey.operatorId'))])
-    .select((eb) => [passengers(db, eb.ref('journey.id'))]);
+    .select((eb) => [passengers(db, eb.ref('journey.id'))])
+    // The length along the rails, when a route was computed for the journey.
+    .select((eb) =>
+      eb
+        .selectFrom('journeyTrack')
+        .select('journeyTrack.lengthM')
+        .whereRef('journeyTrack.journeyId', '=', 'journey.id')
+        .where('journeyTrack.sourceFormat', '=', 'rail')
+        .as('railDistanceM'),
+    );
 
   if (!userId) {
     return query;
@@ -435,6 +444,8 @@ export const upsertJourneyTrackPrimitiveWithConnection = async (
   db: Kysely<DB>,
   journeyId: number,
   track: JourneyTrackInput,
+  /** The length of a route computed along the rails, in metres. */
+  { lengthM = null }: { lengthM?: number | null } = {},
 ) => {
   const validTrack = normalizeJourneyTrackInput(track);
   const payload = toJourneyTrackPayload(validTrack);
@@ -447,6 +458,7 @@ export const upsertJourneyTrackPrimitiveWithConnection = async (
       sourceFormat: validTrack.sourceFormat,
       sourceName: validTrack.sourceName ?? null,
       pointCount: validTrack.coordinates.length,
+      lengthM,
       updatedAt: new Date(),
     })
     .onConflict((oc) =>
@@ -455,6 +467,8 @@ export const upsertJourneyTrackPrimitiveWithConnection = async (
         sourceFormat: validTrack.sourceFormat,
         sourceName: validTrack.sourceName ?? null,
         pointCount: validTrack.coordinates.length,
+        // A track that replaces a computed route must not keep its length.
+        lengthM,
         updatedAt: sql`CURRENT_TIMESTAMP`,
       }),
     )

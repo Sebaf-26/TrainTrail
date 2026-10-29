@@ -154,6 +154,10 @@ export type journey_track = {
     sourceFormat: 'gpx' | 'kml' | 'csv' | 'readsb' | 'rail';
     sourceName: string | null;
     pointCount: number;
+    /**
+     * Length in metres, set for routes computed along the rails; null for any other track.
+     */
+    lengthM: number | null;
     createdAt: Generated<Timestamp>;
     updatedAt: Generated<Timestamp>;
 };

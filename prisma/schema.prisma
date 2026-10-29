@@ -212,6 +212,8 @@ model journey_track {
   source_format String
   source_name   String?
   point_count   Int
+  /// Length in metres, set for routes computed along the rails; null for any other track.
+  length_m      Float?
 
   created_at DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @updatedAt @db.Timestamptz

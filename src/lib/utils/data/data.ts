@@ -5,7 +5,7 @@ import { resolveJourneyTimeline } from './journey-timeline';
 
 import { page } from '$app/state';
 import type { Station, Journey, JourneyPassenger } from '$lib/db/types';
-import { distanceBetween } from '$lib/utils';
+import { journeyDistanceKm } from '$lib/utils';
 import { seatClassLabel, seatTypeLabel } from '$lib/utils/journey-labels';
 import { nowIn } from '$lib/utils/datetime';
 
@@ -52,13 +52,7 @@ export const prepareJourneyData = (data: Journey[]): JourneyData[] => {
         dateEnd: timeline.dateEnd,
         departure: timeline.recordedDeparture,
         arrival: timeline.recordedArrival,
-        distance:
-          journey.from && journey.to
-            ? distanceBetween(
-                [journey.from.lon, journey.from.lat],
-                [journey.to.lon, journey.to.lat],
-              ) / 1000
-            : null,
+        distance: journeyDistanceKm(journey),
         raw: journey,
       };
     })
