@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 FROM eclipse-temurin:17-jre
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl ca-certificates \
+ && apt-get install -y --no-install-recommends curl ca-certificates osmium-tool \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /railway_routing.jar /app/railway_routing.jar
@@ -43,6 +43,7 @@ RUN chmod +x /app/entrypoint.sh
 # The OSM extract and the graph built from it live here: mount a volume.
 VOLUME /data
 ENV RAIL_OSM_URL=https://download.geofabrik.de/europe/italy-latest.osm.pbf \
+    RAIL_OSM_URLS="" \
     RAIL_JAVA_OPTS="-Xmx4g -Xms256m"
 EXPOSE 8989
 # Importing a country takes a while the first time, hence the long start period.

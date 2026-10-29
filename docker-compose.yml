@@ -17,6 +17,12 @@
 #   RAIL_OSM_URL     the .osm.pbf extract to route on (default: Italy, about 2.2 GB).
 #                    A smaller region from download.geofabrik.de is fine; rebuilding
 #                    starts by itself when it changes.
+#   RAIL_OSM_URLS    several extracts, separated by commas, merged into one: a journey
+#                    abroad needs the tracks of both countries. When set, it is used
+#                    instead of RAIL_OSM_URL. For Italy, Austria, Switzerland and France:
+#                    https://download.geofabrik.de/europe/italy-latest.osm.pbf,https://download.geofabrik.de/europe/austria-latest.osm.pbf,https://download.geofabrik.de/europe/switzerland-latest.osm.pbf,https://download.geofabrik.de/europe/france-latest.osm.pbf
+#                    Needs the free disk of the extracts twice (they are merged, then
+#                    the separate files are removed).
 #   RAIL_JAVA_OPTS   Java options, default "-Xmx4g -Xms256m". The container needs more
 #                    memory than the heap: see RAIL_MEM_LIMIT.
 #   RAIL_MEM_LIMIT   memory limit of the container (default 6g).
@@ -87,6 +93,7 @@ services:
     mem_limit: ${RAIL_MEM_LIMIT:-6g}
     environment:
       RAIL_OSM_URL: ${RAIL_OSM_URL:-https://download.geofabrik.de/europe/italy-latest.osm.pbf}
+      RAIL_OSM_URLS: ${RAIL_OSM_URLS:-}
       RAIL_JAVA_OPTS: ${RAIL_JAVA_OPTS:--Xmx4g -Xms256m}
       TZ: ${TZ:-Europe/Rome}
     volumes:

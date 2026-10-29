@@ -62,7 +62,12 @@ tracks instead. It does not start unless you ask for it, so it cannot block the 
    smaller region from [download.geofabrik.de](https://download.geofabrik.de)) and builds the routing graph. This takes
    a while and needs memory: the container is limited to `RAIL_MEM_LIMIT` (default 6g) and the Java heap is set with
    `RAIL_JAVA_OPTS` (default `-Xmx4g`). To try it, start with a small region.
-3. New and imported journeys are drawn along the rails in the background. For journeys you already have, open the
+3. A journey abroad needs the tracks of both countries. One extract covers one country, so set `RAIL_OSM_URLS` to
+   several extracts separated by commas and they are merged into one (Italy 2.1 GB, Austria 0.8 GB, Switzerland
+   0.5 GB, Germany 4.5 GB; France is several GB): `https://download.geofabrik.de/europe/italy-latest.osm.pbf,https://download.geofabrik.de/europe/austria-latest.osm.pbf`.
+   Merging needs the free disk of the extracts twice. An extract that was already downloaded alone is kept, and
+   changing the list rebuilds the graph by itself.
+4. New and imported journeys are drawn along the rails in the background. For journeys you already have, open the
    journey on the map and press "Draw along the rails". If no route is found, the straight line stays.
 
 Everything the feature does is logged with the `[rail-routing]` prefix, in the TrainTrail container and in the
