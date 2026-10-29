@@ -35,6 +35,22 @@ bun run dev   # start the development server
 
 Every setting is read from environment variables; see [`.env.example`](.env.example).
 
+## 🐳 Deploy with Docker
+
+[`docker-compose.yml`](docker-compose.yml) builds TrainTrail from this repository and starts it with PostgreSQL. It
+works as a Git stack in Portainer (repository URL, compose path `docker-compose.yml`) or from a terminal:
+
+```bash
+ORIGIN=https://trains.example.com DB_PASSWORD=choose-a-password docker compose up -d --build
+```
+
+- `ORIGIN` is the exact URL you open TrainTrail with; login fails if it does not match.
+- `DB_PASSWORD` accepts letters and digits only. Set it before the first start: Postgres keeps the one it started with.
+- `TRAINTRAIL_PORT` changes the published port (default `8096`). Behind a reverse proxy, also set
+  `ADDRESS_HEADER=X-Forwarded-For`.
+
+Migrations, the station list and the bundled operators and trains are loaded automatically at first start.
+
 ## 📜 License and credits
 
 TrainTrail is free software released under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Any copy

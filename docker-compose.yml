@@ -1,0 +1,61 @@
+# Builds TrainTrail from this repository, so it can be deployed as a Git stack
+# (for example in Portainer) without a published image.
+#
+# Variables, set in a .env file or in the stack's environment variables:
+#   ORIGIN        required. The exact URL you open TrainTrail with, e.g. https://trains.example.com
+#   DB_PASSWORD   required. Letters and digits only. Postgres keeps the password it was first started
+#                 with, so choose it before the first start.
+#   TRAINTRAIL_PORT, ADDRESS_HEADER, PUID, PGID, TZ: optional, see below.
+#
+# To use a published image instead, see docker/production/compose.yml.
+services:
+  db:
+    container_name: traintrail_db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: traintrail
+      POSTGRES_USER: traintrail
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # To keep the database in a folder on the host, use a bind mount such as
+      # /srv/traintrail/db:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U traintrail -d traintrail']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  traintrail:
+    container_name: traintrail
+    image: traintrail:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '${TRAINTRAIL_PORT:-8096}:3000'
+    environment:
+      ORIGIN: ${ORIGIN:?Set ORIGIN to the URL you open TrainTrail with}
+      DB_URL: postgres://traintrail:${DB_PASSWORD:?Set DB_PASSWORD}@db:5432/traintrail
+      UPLOAD_LOCATION: /app/uploads
+      # Behind a reverse proxy, the header carrying the client address
+      # (X-Forwarded-For). Leave empty when clients connect directly.
+      ADDRESS_HEADER: ${ADDRESS_HEADER:-}
+      # User and group the uploads folder is given to on every start.
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # To keep uploads in a folder on the host, use a bind mount such as
+      # /srv/traintrail/uploads:/app/uploads
+      - uploads:/app/uploads
+
+volumes:
+  db_data:
+  uploads:

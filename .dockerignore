@@ -4,6 +4,7 @@
 /static/showcase/**
 !/src/**
 !/prisma/**
+!/data/**
 !/temp/**
 !/package.json
 !/bun.lock
