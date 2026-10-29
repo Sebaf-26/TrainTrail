@@ -39,6 +39,10 @@ graphhopper:
   routing.snap_preventions_default: tunnel, bridge, ferry
   routing.non_ch.max_waypoint_distance: 1000000
 
+  # Required by the engine (it refuses to start without the key). Same value as
+  # the example configuration: ways of these highway types are not imported.
+  import.osm.ignored_highways: footway,construction,cycleway,path,steps
+
   graph.dataaccess.default_type: RAM_STORE
 
 server:
