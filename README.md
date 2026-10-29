@@ -46,7 +46,7 @@ ORIGIN=https://trains.example.com DB_PASSWORD=choose-a-password docker compose u
 
 - `ORIGIN` is the exact URL you open TrainTrail with; login fails if it does not match.
 - `DB_PASSWORD` accepts letters and digits only. Set it before the first start: Postgres keeps the one it started with.
-- `TRAINTRAIL_PORT` changes the published port (default `8096`). Behind a reverse proxy, also set
+- `PORT` changes the port published on the host (default `8096`). Behind a reverse proxy, also set
   `ADDRESS_HEADER=X-Forwarded-For`.
 
 Migrations, the station list and the bundled operators and trains are loaded automatically at first start.

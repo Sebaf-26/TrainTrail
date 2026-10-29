@@ -5,7 +5,9 @@
 #   ORIGIN        required. The exact URL you open TrainTrail with, e.g. https://trains.example.com
 #   DB_PASSWORD   required. Letters and digits only. Postgres keeps the password it was first started
 #                 with, so choose it before the first start.
-#   TRAINTRAIL_PORT, ADDRESS_HEADER, PUID, PGID, TZ: optional, see below.
+#   PORT          optional. The port published on the host (default 8096). Inside the container
+#                 the app always listens on 3000.
+#   ADDRESS_HEADER, PUID, PGID, TZ: optional, see below.
 #
 # To use a published image instead, see docker/production/compose.yml.
 services:
@@ -39,7 +41,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - '${TRAINTRAIL_PORT:-8096}:3000'
+      - '${PORT:-8096}:3000'
     environment:
       ORIGIN: ${ORIGIN:?Set ORIGIN to the URL you open TrainTrail with}
       DB_URL: postgres://traintrail:${DB_PASSWORD:?Set DB_PASSWORD}@db:5432/traintrail
