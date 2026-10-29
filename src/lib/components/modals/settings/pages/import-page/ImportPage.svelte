@@ -17,7 +17,7 @@
   import * as Alert from '$lib/components/ui/alert';
   import { Button } from '$lib/components/ui/button';
   import { Card } from '$lib/components/ui/card';
-  import { processFile } from '$lib/import';
+  import { processFiles } from '$lib/import';
   import {
     createEmptyImportMappings,
     createEmptyImportUnknowns,
@@ -41,8 +41,11 @@
 
   let files: FileList | null = $state(null);
   let pastedText = $state('');
-  let originalFile: File | null = $state(null);
+  let originalFiles: File[] = $state([]);
   let fileError: string | null = $state(null);
+
+  // Tickets can be many at once, e.g. a folder of PDFs.
+  const MAX_FILES = 300;
 
   let importing = $state(false);
   let importedCount = $state(0);
@@ -95,14 +98,24 @@
   );
 
   const validateFile = () => {
-    const file = files?.[0];
-    if (!file) return;
+    const selected = Array.from((files ?? []) as ArrayLike<File>);
+    if (selected.length === 0) return;
 
     const extensions: readonly string[] = platform.extensions;
-    if (!extensions.some((ext) => file.name.toLowerCase().endsWith(ext))) {
-      fileError = 'File type not supported';
-    } else if (file.size > 5 * 1024 * 1024) {
-      fileError = 'File must be less than 5MB';
+    const unsupported = selected.find(
+      (file) =>
+        !extensions.some((ext) => file.name.toLowerCase().endsWith(ext)),
+    );
+    const tooBig = selected.find((file) => file.size > 5 * 1024 * 1024);
+    // With several files, say which one is the problem.
+    const which = (file: File) => (selected.length > 1 ? `: ${file.name}` : '');
+
+    if (unsupported) {
+      fileError = `File type not supported${which(unsupported)}`;
+    } else if (tooBig) {
+      fileError = `File must be less than 5MB${which(tooBig)}`;
+    } else if (selected.length > MAX_FILES) {
+      fileError = `Choose at most ${MAX_FILES} files`;
     } else {
       fileError = null;
     }
@@ -111,7 +124,8 @@
   const hasPastedTicket = $derived(
     platform.value === 'ticket' && pastedText.trim() !== '',
   );
-  const canImport = $derived((!!files?.[0] && !fileError) || hasPastedTicket);
+  const hasFiles = $derived(!!files?.[0]);
+  const canImport = $derived((hasFiles && !fileError) || hasPastedTicket);
   const createMany = trpc.journey.createMany.mutation();
 
   const getImportErrorMessage = (
@@ -183,9 +197,9 @@
     userMapping?: Record<string, string>;
     allowUnmappedOptional?: boolean;
   }) => {
-    if (!originalFile) return;
+    if (originalFiles.length === 0) return;
 
-    const result = await processFile(originalFile, platform.value, {
+    const result = await processFiles(originalFiles, platform.value, {
       filterOwner: ownerOnly,
       importMode,
       stationMapping: mapping?.mappings?.stations,
@@ -276,19 +290,21 @@
 
   const handleImport = async () => {
     // A pasted ticket is read like an uploaded text file.
-    const file =
-      files?.[0] ??
-      (hasPastedTicket
-        ? new File([pastedText], 'ticket.txt', { type: 'text/plain' })
-        : undefined);
-    if (!file || (files?.[0] && fileError)) return;
+    const selected = Array.from((files ?? []) as ArrayLike<File>);
+    const chosen =
+      selected.length > 0
+        ? selected
+        : hasPastedTicket
+          ? [new File([pastedText], 'ticket.txt', { type: 'text/plain' })]
+          : [];
+    if (chosen.length === 0 || (selected.length > 0 && fileError)) return;
 
     importing = true;
-    originalFile = file;
+    originalFiles = chosen;
     handledJourneyIndices.clear();
 
     try {
-      const result = await processFile(file, platform.value, {
+      const result = await processFiles(chosen, platform.value, {
         filterOwner: ownerOnly,
         importMode,
       });
@@ -342,7 +358,7 @@
   const handleImportRemaining = async (
     pendingMappings: ImportMappings,
   ): Promise<boolean> => {
-    if (!originalFile) return false;
+    if (originalFiles.length === 0) return false;
     const nextMappings = mergeImportMappings(appliedMappings, pendingMappings);
 
     importing = true;
@@ -377,7 +393,7 @@
     importFailures = [];
     files = null;
     pastedText = '';
-    originalFile = null;
+    originalFiles = [];
     fileError = null;
     importing = false;
     ownerOnly = false;

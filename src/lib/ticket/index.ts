@@ -3,6 +3,7 @@ import { hasGoogleWalletLink, parseGoogleWalletLink } from './google-wallet';
 import { mergeTickets } from './merge';
 import { parseOebbPages } from './oebb';
 import { extractPdfPages } from './pdf';
+import { parseTrenitaliaPages } from './trenitalia';
 import { isPkpass, parsePkpass } from './pkpass';
 import { parseTicketText } from './text';
 import type { ParseTicketResult } from './types';
@@ -48,8 +49,8 @@ const looksLikePdf = (bytes: Uint8Array) =>
   bytes[3] === 0x46;
 
 /**
- * A ticket as PDF: its text is read with pdf.js, then as an ÖBB ticket, and
- * as plain ticket text when it is not one. A PDF with no text (a scan without
+ * A ticket as PDF: its text is read with pdf.js, then as an ÖBB or a
+ * Trenitalia ticket, and as plain ticket text when it is neither. A PDF with no text (a scan without
  * OCR) says so, as nothing can be read from it.
  */
 const parsePdf = async (
@@ -74,6 +75,11 @@ const parsePdf = async (
   const oebb = parseOebbPages(pages, options);
   if (oebb.tickets.length > 0) {
     return oebb;
+  }
+
+  const trenitalia = parseTrenitaliaPages(pages);
+  if (trenitalia.tickets.length > 0) {
+    return trenitalia;
   }
 
   const tickets = parseTicketText(pages.join('\n\n'), options).map(

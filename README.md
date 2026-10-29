@@ -17,7 +17,7 @@
 - **Map**: see every journey you took on an interactive map.
 - **Journey history**: keep all your train trips in one place, with train number, platform, coach, seat and class.
 - **Stations**: Europe-wide station list (about 23,000 railway stations, 3,900 of them in Italy), downloaded at first start.
-- **Import a ticket**: read a journey from the message or e-mail of your operator, a PDF ticket (ÖBB, with one journey per page), an Apple Wallet pass (`.pkpass`) or a Google Wallet link, instead of typing it. PDFs are read in the browser with [pdf.js](https://mozilla.github.io/pdf.js/); the barcode of a PDF ticket is not kept. The barcode of a pass is kept with the journey, so you can show it again in its original format (Aztec, QR, PDF417 or Code 128).
+- **Import a ticket**: read a journey from the message or e-mail of your operator, a PDF ticket (Trenitalia, which gives one journey per leg, or ÖBB), an Apple Wallet pass (`.pkpass`) or a Google Wallet link, instead of typing it. PDFs are read in the browser with [pdf.js](https://mozilla.github.io/pdf.js/), and you can choose many files at once, for example a folder of tickets; the barcode of a PDF ticket is not kept. The barcode of a pass is kept with the journey, so you can show it again in its original format (Aztec, QR, PDF417 or Code 128).
 - **Statistics**: distance, time on board, most used operators and stations, countries visited.
 - **Multiple users**: share journeys, secure your data with authentication and integrate with your OAuth provider.
 - **Responsive design** and **dark mode**.

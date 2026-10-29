@@ -132,11 +132,26 @@ const addUnknown = (
  * Wallet link into journeys. Stations are matched by the name printed on the
  * ticket; the ones that are not recognised are left for the user to match.
  */
-export const processTicketInput = async (
-  input: TicketInput,
+/** A ticket, or a way to get it: a file is only read when its turn comes. */
+type TicketSource = TicketInput | (() => Promise<TicketInput>);
+
+export const processTicketInputs = async (
+  inputs: TicketSource[],
   options: PlatformOptions,
 ): Promise<ProcessResult> => {
-  const { tickets, warnings } = await parseTicketInput(input);
+  const tickets: ParsedTicket[] = [];
+  const warnings: string[] = [];
+  let unreadable = 0;
+  for (const input of inputs) {
+    const parsed = await parseTicketInput(
+      typeof input === 'function' ? await input() : input,
+    );
+    tickets.push(...parsed.tickets);
+    if (parsed.tickets.length === 0) {
+      unreadable += 1;
+      warnings.push(...parsed.warnings);
+    }
+  }
   if (tickets.length === 0) {
     throw new Error(warnings[0] ?? 'No train journey was found.');
   }
@@ -164,7 +179,8 @@ export const processTicketInput = async (
   const journeys: CreateJourney[] = [];
   const unknownStations: UnknownImportValues = {};
   const unknownOperators: UnknownImportValues = {};
-  let skippedRows = 0;
+  // A file in which nothing was found counts as skipped, like a row.
+  let skippedRows = unreadable;
 
   for (const ticket of tickets) {
     // A journey needs at least its day.
@@ -218,17 +234,31 @@ export const processTicketInput = async (
   };
 };
 
+export const processTicketInput = (
+  input: TicketInput,
+  options: PlatformOptions,
+) => processTicketInputs([input], options);
+
 export const processTicketText = (text: string, options: PlatformOptions) =>
   processTicketInput({ text }, options);
 
+const toTicketInput = async (file: File): Promise<TicketInput> => ({
+  file: {
+    name: file.name,
+    type: file.type,
+    bytes: new Uint8Array(await file.arrayBuffer()),
+  },
+});
+
 export const processTicketFile = async (file: File, options: PlatformOptions) =>
-  processTicketInput(
-    {
-      file: {
-        name: file.name,
-        type: file.type,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      },
-    },
+  processTicketInput(await toTicketInput(file), options);
+
+/** Several tickets at once, e.g. a folder of PDFs: their journeys are imported together. */
+export const processTicketFiles = async (
+  files: File[],
+  options: PlatformOptions,
+) =>
+  processTicketInputs(
+    files.map((file) => () => toTicketInput(file)),
     options,
   );

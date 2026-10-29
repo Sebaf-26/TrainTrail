@@ -1,3 +1,4 @@
+import { CODE_BY_TRAIN_NAME, TRAIN_CODES } from './trains';
 import {
   emptyTicket,
   type ParsedTicket,
@@ -82,24 +83,6 @@ const TRAIN_NAMES = [
   'Railjet',
   'Nightjet',
 ];
-const TRAIN_CODES: Record<string, string> = {
-  FR: 'Frecciarossa',
-  FA: 'Frecciargento',
-  FB: 'Frecciabianca',
-  ICN: 'Intercity Notte',
-  IC: 'Intercity',
-  EC: 'Eurocity',
-  EN: 'Euronight',
-  RV: 'Regionale Veloce',
-  REG: 'Regionale',
-  ITA: 'Italo',
-  RJX: 'Railjet Xpress',
-  RJ: 'Railjet',
-  NJ: 'Nightjet',
-};
-const CODE_BY_TRAIN_NAME = new Map(
-  Object.entries(TRAIN_CODES).map(([code, name]) => [name.toLowerCase(), code]),
-);
 const NUMBER_PREFIX =
   '\\s*(?:n\\.?|nr\\.?|numero|№|#)?\\s*[:]?\\s*(\\d{1,5})\\b';
 const TRAIN_NAME_NUMBER = new RegExp(

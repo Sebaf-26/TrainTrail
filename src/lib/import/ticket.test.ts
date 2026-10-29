@@ -1,7 +1,11 @@
 import { strToU8, zipSync } from 'fflate';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { processTicketFile, processTicketText } from './ticket';
+import {
+  processTicketFile,
+  processTicketFiles,
+  processTicketText,
+} from './ticket';
 
 const { stationQuery, getOperatorByName } = vi.hoisted(() => ({
   stationQuery: vi.fn(),
@@ -209,5 +213,57 @@ describe('processTicketText', () => {
     const result = await processTicketText(TICKET, options);
 
     expect(result.journeys[0]?.ticket).toBeNull();
+  });
+});
+
+describe('processTicketFiles', () => {
+  const textFile = (text: string, name = 'ticket.txt') =>
+    new File([text], name, { type: 'text/plain' });
+
+  const UNKNOWN_STATION = `Da: Atlantide
+A: Roma Termini
+Partenza: 28/10/2026 10:00
+Arrivo: 28/10/2026 12:00`;
+
+  it('imports the journeys of every file together', async () => {
+    const result = await processTicketFiles(
+      [textFile(TICKET), textFile(TICKET.replace('27/10', '28/10'))],
+      options,
+    );
+
+    expect(result.journeys.map((journey) => journey.date)).toEqual([
+      '2026-10-27',
+      '2026-10-28',
+    ]);
+    expect(result.skippedRows).toBe(0);
+  });
+
+  it('points the unknown stations at the journey of their own file', async () => {
+    const result = await processTicketFiles(
+      [textFile(TICKET), textFile(UNKNOWN_STATION)],
+      options,
+    );
+
+    expect(result.journeys).toHaveLength(2);
+    expect(result.unknowns.stations).toEqual({ Atlantide: [1] });
+  });
+
+  it('skips a file with nothing to read and counts it', async () => {
+    const result = await processTicketFiles(
+      [textFile('Ci vediamo a pranzo'), textFile(TICKET)],
+      options,
+    );
+
+    expect(result.journeys).toHaveLength(1);
+    expect(result.skippedRows).toBe(1);
+  });
+
+  it('says so when no file has a journey', async () => {
+    await expect(
+      processTicketFiles(
+        [textFile('Ci vediamo a pranzo'), textFile('Buona giornata')],
+        options,
+      ),
+    ).rejects.toThrow('No train journey was found');
   });
 });

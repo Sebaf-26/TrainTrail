@@ -57,7 +57,10 @@
       {#if fileError}
         {fileError}
       {:else}
-        {files?.[0]?.name ?? 'Upload file'}
+        {files && files.length > 1
+          ? `${files.length} files`
+          : (files?.[0]?.name ??
+            (acceptsText ? 'Upload files' : 'Upload file'))}
       {/if}
     </Card>
   </label>
@@ -68,6 +71,7 @@
   id="file"
   name="file"
   type="file"
+  multiple={acceptsText}
   accept={platform.extensions.join(',')}
   bind:files
   class="hidden"

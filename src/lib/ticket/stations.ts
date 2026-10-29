@@ -13,6 +13,10 @@ const ABBREVIATIONS: [RegExp, string][] = [
   // ÖBB prints upper-case names, with abbreviations of its own.
   [/\bC\.\s?MARTE\b/gi, 'Campo di Marte'],
   [/\bHBF\b/gi, 'Hbf'],
+  // Trenitalia calls the airport station of Rome by its place name.
+  [/^FIUMICINO AEROPORTO$/gi, 'Roma Fiumicino Aeroporto'],
+  // Tickets for abroad print umlauts as ue/oe/ae.
+  [/\bZUERICH\b/gi, 'Zürich'],
   [/\bHAUPTBAHNHOF\b/gi, 'Hbf'],
 ];
 
@@ -33,5 +37,10 @@ export const stationNameVariants = (name: string): string[] => {
   );
   const withoutQualifier = collapse(expanded.replace(/\s*\([^)]*\)\s*$/, ''));
 
-  return [...new Set([printed, expanded, withoutQualifier])].filter(Boolean);
+  // Names of tickets for abroad join the words with hyphens.
+  const spaced = collapse(withoutQualifier.replace(/-/g, ' '));
+
+  return [...new Set([printed, expanded, withoutQualifier, spaced])].filter(
+    Boolean,
+  );
 };
