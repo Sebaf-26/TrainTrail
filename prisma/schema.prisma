@@ -43,6 +43,7 @@ model user {
 
   sessions                     session[]
   journey_passengers           journey_passenger[]
+  journey_tickets              journey_ticket[]
   visited_countries            visited_country[]
   api_keys                     api_key[]
   public_share                 public_share[]
@@ -197,6 +198,7 @@ model journey {
   operator   operator?           @relation(fields: [operator_id], references: [id])
   passengers journey_passenger[]
   track      journey_track?
+  tickets    journey_ticket[]
 
   @@index([from_id], map: "journey_from_id_idx")
   @@index([to_id], map: "journey_to_id_idx")
@@ -215,6 +217,25 @@ model journey_track {
   updated_at DateTime @default(now()) @updatedAt @db.Timestamptz
 
   journey journey @relation(fields: [journey_id], references: [id], onDelete: Cascade)
+}
+
+model journey_ticket {
+  id         Int    @id @default(autoincrement())
+  journey_id Int
+  user_id    String
+
+  /// @kyselyType('aztec' | 'qr' | 'pdf417' | 'code128')
+  barcode_format String
+  /// Base64 of the raw bytes of the barcode message.
+  barcode_data   String
+  passenger_name String?
+
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  journey journey @relation(fields: [journey_id], references: [id], onDelete: Cascade)
+  user    user    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([journey_id, user_id])
 }
 
 model journey_passenger {

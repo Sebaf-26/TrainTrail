@@ -5,6 +5,7 @@ import type {
   api_key,
   journey,
   journey_track,
+  journey_ticket,
   public_share,
   journey_passenger,
   user,
@@ -73,6 +74,11 @@ type JourneyRecord = Omit<
   Selectable<journey>,
   'id' | 'fromId' | 'toId' | 'trainId' | 'operatorId'
 >;
+/** The ticket barcode kept with a journey for the user who imported it. */
+export type JourneyTicketInput = Pick<
+  Selectable<journey_ticket>,
+  'barcodeFormat' | 'barcodeData' | 'passengerName'
+>;
 export type CreateJourney = JourneyRecord & {
   from: CreateJourneyStation | null;
   to: CreateJourneyStation | null;
@@ -80,6 +86,8 @@ export type CreateJourney = JourneyRecord & {
   operator: CreateJourneyEntityReference<Operator> | null;
   passengers: CreateJourneyPassenger[];
   track?: JourneyTrackInput | null;
+  /** Belongs to the first passenger that is a user; never part of exports or shares. */
+  ticket?: JourneyTicketInput | null;
 };
 export type PublicShare = Selectable<public_share>;
 export type VisitedCountry = Selectable<visited_country>;

@@ -18,6 +18,7 @@ import {
   resolveJourneyPassengerChanges,
   updateJourneyPrimitive,
   updateJourneyPrimitiveWithConnection,
+  upsertJourneyTicketPrimitiveWithConnection,
   upsertJourneyTrackPrimitiveWithConnection,
 } from '$lib/db/queries';
 import type { DB } from '$lib/db/schema';
@@ -709,6 +710,10 @@ export const createManyJourneys = async (
     journeyId: number;
     update: MissingJourneyReferenceUpdate;
   }> = [];
+  const ticketsToUpsert: Array<{
+    journeyId: number;
+    ticket: NonNullable<CreateJourney['ticket']>;
+  }> = [];
 
   for (const f of uniqueJourneys) {
     const key = signature(f);
@@ -717,6 +722,9 @@ export const createManyJourneys = async (
       const existingId = existingJourney.id;
       if (f.track) {
         tracksToUpsert.push({ journeyId: existingId, track: f.track });
+      }
+      if (f.ticket) {
+        ticketsToUpsert.push({ journeyId: existingId, ticket: f.ticket });
       }
       const referenceUpdate = getMissingJourneyReferenceUpdate(
         existingJourney,
@@ -768,7 +776,8 @@ export const createManyJourneys = async (
   if (
     referenceUpdates.length ||
     passengersToAttach.length ||
-    tracksToUpsert.length
+    tracksToUpsert.length ||
+    ticketsToUpsert.length
   ) {
     await db.transaction().execute(async (trx) => {
       for (const { journeyId, update } of referenceUpdates) {
@@ -792,6 +801,16 @@ export const createManyJourneys = async (
 
       for (const { journeyId, track } of tracksToUpsert) {
         await upsertJourneyTrackPrimitiveWithConnection(trx, journeyId, track);
+      }
+
+      // A re-imported ticket replaces the one kept for the importing user.
+      for (const { journeyId, ticket } of ticketsToUpsert) {
+        await upsertJourneyTicketPrimitiveWithConnection(
+          trx,
+          journeyId,
+          userId,
+          ticket,
+        );
       }
 
       if (passengersToAttach.length) {

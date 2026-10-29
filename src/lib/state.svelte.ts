@@ -43,18 +43,24 @@ export type SettingsTabId =
 
 export type OpenModalsState = {
   addJourney: boolean;
+  /** Asks whether to fill a journey in by hand or to import a ticket. */
+  addJourneyChoice: boolean;
   listJourneys: boolean;
   statistics: boolean;
   settings: boolean;
   settingsTab: SettingsTabId;
+  /** The import source Settings > Import opens on, set by whoever opens it. */
+  importPlatform: 'ticket' | null;
 };
 
 export const openModalsState = $state<OpenModalsState>({
   addJourney: false,
+  addJourneyChoice: false,
   listJourneys: false,
   statistics: false,
   settings: false,
   settingsTab: 'general',
+  importPlatform: null,
 });
 
 export type MapDetailsSelection =

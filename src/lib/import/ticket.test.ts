@@ -1,6 +1,7 @@
+import { strToU8, zipSync } from 'fflate';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { processTicketText } from './ticket';
+import { processTicketFile, processTicketText } from './ticket';
 
 const { stationQuery, getOperatorByName } = vi.hoisted(() => ({
   stationQuery: vi.fn(),
@@ -162,5 +163,51 @@ describe('processTicketText', () => {
     await expect(
       processTicketText('Ci vediamo a pranzo', options),
     ).rejects.toThrow('No train journey was found');
+  });
+
+  it('keeps the barcode of a pass with the journey for the importing user', async () => {
+    const pass = {
+      formatVersion: 1,
+      organizationName: 'Trenitalia',
+      description: 'Biglietto',
+      barcodes: [
+        {
+          format: 'PKBarcodeFormatAztec',
+          message: String.fromCharCode(0x20, 0xc2, 0xff),
+          messageEncoding: 'iso-8859-1',
+        },
+      ],
+      boardingPass: {
+        primaryFields: [
+          { key: 'from', label: 'Da', value: 'Milano Centrale' },
+          { key: 'to', label: 'A', value: 'Roma Termini' },
+        ],
+        secondaryFields: [
+          { key: 'dep', label: 'Partenza', value: '2026-10-27T10:00:00+01:00' },
+        ],
+        auxiliaryFields: [
+          { key: 'passenger', label: 'Passeggero', value: 'ROSSI MARIO' },
+        ],
+      },
+    };
+    const file = new File(
+      [zipSync({ 'pass.json': strToU8(JSON.stringify(pass)) })],
+      'ticket.pkpass',
+      { type: 'application/vnd.apple.pkpass' },
+    );
+
+    const result = await processTicketFile(file, options);
+
+    expect(result.journeys[0]?.ticket).toEqual({
+      barcodeFormat: 'aztec',
+      barcodeData: btoa(String.fromCharCode(0x20, 0xc2, 0xff)),
+      passengerName: 'ROSSI MARIO',
+    });
+  });
+
+  it('has no ticket when the journey comes from plain text', async () => {
+    const result = await processTicketText(TICKET, options);
+
+    expect(result.journeys[0]?.ticket).toBeNull();
   });
 });

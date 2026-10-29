@@ -8,6 +8,19 @@ export type LocalDateTime = {
   time: string | null;
 };
 
+export const BarcodeFormats = ['aztec', 'qr', 'pdf417', 'code128'] as const;
+export type BarcodeFormat = (typeof BarcodeFormats)[number];
+
+/**
+ * The barcode of a ticket, kept exactly as issued: it is shown again as the
+ * same symbol, because the scanner that checks the ticket expects that format.
+ */
+export type TicketBarcode = {
+  format: BarcodeFormat;
+  /** Base64 of the raw bytes of the barcode message. */
+  data: string;
+};
+
 export type TicketSource = 'text' | 'email' | 'pkpass' | 'google-wallet';
 
 /**
@@ -33,6 +46,7 @@ export type ParsedTicket = {
   seatClass: SeatClass | null;
   bookingCode: string | null;
   passengerName: string | null;
+  barcode: TicketBarcode | null;
 };
 
 export type ParseTicketResult = {
@@ -56,4 +70,5 @@ export const emptyTicket = (source: TicketSource): ParsedTicket => ({
   seatClass: null,
   bookingCode: null,
   passengerName: null,
+  barcode: null,
 });

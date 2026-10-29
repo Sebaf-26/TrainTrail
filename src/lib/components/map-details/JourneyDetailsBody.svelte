@@ -19,6 +19,8 @@
   import { convertDistance, distanceUnitLabel } from '$lib/utils/preferences';
   import type { Preferences } from '$lib/zod/user';
 
+  import JourneyTicket from './JourneyTicket.svelte';
+
   let {
     journey,
     prefs,
@@ -145,6 +147,8 @@
     </p>
   {/if}
 </section>
+
+<JourneyTicket {journey} {seatLabel} />
 
 <section class="px-4 py-3">
   <Button

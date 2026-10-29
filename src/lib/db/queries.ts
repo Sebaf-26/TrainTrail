@@ -2,13 +2,18 @@ import { type Expression, type Kysely, type Selectable, sql } from 'kysely';
 import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 
 import type { DB } from './schema';
-import type { CreateJourney, CreateJourneyPassenger } from './types';
+import type {
+  CreateJourney,
+  CreateJourneyPassenger,
+  JourneyTicketInput,
+} from './types';
 
 import {
   journeyTrackInputSchema,
   toJourneyTrackPayload,
   type JourneyTrackInput,
 } from '$lib/track/schema';
+import { journeyTicketInputSchema } from '$lib/zod/journey-ticket';
 
 const stationColumns = [
   'id',
@@ -244,7 +249,16 @@ export const createJourneyPrimitiveWithConnection = async (
     throw new Error('Journey must have at least one passenger');
   }
 
-  const { passengers, from, to, train, operator, track, ...journeyData } = data;
+  const {
+    passengers,
+    from,
+    to,
+    train,
+    operator,
+    track,
+    ticket,
+    ...journeyData
+  } = data;
   const fromId = from?.id ?? null;
   const toId = to?.id ?? null;
   const trainId = train?.id ?? null;
@@ -288,6 +302,16 @@ export const createJourneyPrimitiveWithConnection = async (
     await upsertJourneyTrackPrimitiveWithConnection(db, resp.id, track);
   }
 
+  const ticketOwner = firstUserPassenger(passengers);
+  if (ticket && ticketOwner) {
+    await upsertJourneyTicketPrimitiveWithConnection(
+      db,
+      resp.id,
+      ticketOwner,
+      ticket,
+    );
+  }
+
   return {
     journeyId: resp.id,
     passengers: persistedPassengers,
@@ -299,7 +323,16 @@ export const updateJourneyPrimitiveWithConnection = async (
   id: number,
   data: CreateJourney,
 ) => {
-  const { passengers, from, to, train, operator, track, ...journeyData } = data;
+  const {
+    passengers,
+    from,
+    to,
+    train,
+    operator,
+    track,
+    ticket,
+    ...journeyData
+  } = data;
   if (!from || !to) {
     throw new Error('Both departure and arrival stations are required');
   }
@@ -329,6 +362,18 @@ export const updateJourneyPrimitiveWithConnection = async (
     } else {
       await upsertJourneyTrackPrimitiveWithConnection(db, id, track);
     }
+  }
+
+  // Only a ticket in the payload is written: the journey form never sends one,
+  // and removing a ticket has its own mutation.
+  const ticketOwner = firstUserPassenger(passengers);
+  if (ticket && ticketOwner) {
+    await upsertJourneyTicketPrimitiveWithConnection(
+      db,
+      id,
+      ticketOwner,
+      ticket,
+    );
   }
 
   if (!passengers.length) return [];
@@ -416,6 +461,53 @@ export const upsertJourneyTrackPrimitiveWithConnection = async (
     .executeTakeFirstOrThrow();
 };
 
+/** The user a ticket is kept for: the first passenger that is a user. */
+const firstUserPassenger = (passengers: readonly CreateJourneyPassenger[]) =>
+  passengers.find((passenger) => passenger.userId)?.userId ?? null;
+
+export const upsertJourneyTicketPrimitiveWithConnection = async (
+  db: Kysely<DB>,
+  journeyId: number,
+  userId: string,
+  ticket: JourneyTicketInput,
+) => {
+  const valid = journeyTicketInputSchema.parse(ticket);
+
+  await db
+    .insertInto('journeyTicket')
+    .values({ journeyId, userId, ...valid })
+    .onConflict((oc) => oc.columns(['journeyId', 'userId']).doUpdateSet(valid))
+    .execute();
+};
+
+/** The ticket kept for this user, never anyone else's. */
+export const getJourneyTicketPrimitive = async (
+  db: Kysely<DB>,
+  journeyId: number,
+  userId: string,
+) => {
+  const ticket = await db
+    .selectFrom('journeyTicket')
+    .select(['barcodeFormat', 'barcodeData', 'passengerName'])
+    .where('journeyId', '=', journeyId)
+    .where('userId', '=', userId)
+    .executeTakeFirst();
+  return ticket ?? null;
+};
+
+export const deleteJourneyTicketPrimitive = async (
+  db: Kysely<DB>,
+  journeyId: number,
+  userId: string,
+) => {
+  const result = await db
+    .deleteFrom('journeyTicket')
+    .where('journeyId', '=', journeyId)
+    .where('userId', '=', userId)
+    .executeTakeFirst();
+  return Number(result.numDeletedRows) > 0;
+};
+
 export const deleteJourneyTrackPrimitiveWithConnection = async (
   db: Kysely<DB>,
   journeyId: number,
@@ -446,6 +538,7 @@ export const createManyJourneysPrimitive = async (
             train,
             operator,
             track: _track,
+            ticket: _ticket,
             ...rest
           }) => ({
             ...rest,
@@ -499,6 +592,23 @@ export const createManyJourneysPrimitive = async (
 
     if (trackData.length) {
       await trx.insertInto('journeyTrack').values(trackData).execute();
+    }
+
+    const ticketData = journeys.flatMap((journey, index) => {
+      const input = data[index];
+      const owner = input ? firstUserPassenger(input.passengers) : null;
+      if (!input?.ticket || !owner) return [];
+      return [
+        {
+          journeyId: journey.id,
+          userId: owner,
+          ...journeyTicketInputSchema.parse(input.ticket),
+        },
+      ];
+    });
+
+    if (ticketData.length) {
+      await trx.insertInto('journeyTicket').values(ticketData).execute();
     }
   });
 };

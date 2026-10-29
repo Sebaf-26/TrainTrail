@@ -28,7 +28,7 @@
     icon: GitBranchPlus,
     testId: 'add-journey-button',
     onClick: () => {
-      openModalsState.addJourney = true;
+      openModalsState.addJourneyChoice = true;
     },
   };
   const listJourneysItem = {

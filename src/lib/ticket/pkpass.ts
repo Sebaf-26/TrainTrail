@@ -3,12 +3,15 @@ import { strFromU8, unzipSync } from 'fflate';
 import { parseTicketText } from './text';
 import {
   emptyTicket,
+  type BarcodeFormat,
   type ParsedTicket,
   type ParseTicketResult,
+  type TicketBarcode,
 } from './types';
 
 const MAX_PASS_BYTES = 5_000_000;
 const MAX_ENTRY_BYTES = 2_000_000;
+const MAX_BARCODE_BYTES = 4_000;
 
 type PassField = {
   key?: string;
@@ -27,8 +30,16 @@ type PassStructure = Partial<
   >
 >;
 
+type PassBarcode = {
+  format?: unknown;
+  message?: unknown;
+  messageEncoding?: unknown;
+};
+
 type PassJson = {
   organizationName?: unknown;
+  barcode?: PassBarcode;
+  barcodes?: PassBarcode[];
   description?: unknown;
   relevantDate?: unknown;
   semantics?: Record<string, unknown>;
@@ -225,6 +236,53 @@ const structuredTicket = (
   return ticket;
 };
 
+const BARCODE_FORMATS: Record<string, BarcodeFormat> = {
+  PKBarcodeFormatAztec: 'aztec',
+  PKBarcodeFormatQR: 'qr',
+  PKBarcodeFormatPDF417: 'pdf417',
+  PKBarcodeFormatCode128: 'code128',
+};
+
+const toBase64 = (bytes: Uint8Array) =>
+  btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''));
+
+/**
+ * The barcode of the pass as raw bytes. Passes usually say the message is
+ * ISO-8859-1, where each character is one byte, which matters because the
+ * data of a rail ticket is binary and must not be re-encoded.
+ */
+const barcodeOf = (pass: PassJson): TicketBarcode | null => {
+  const candidates = [
+    ...(pass.barcodes ?? []),
+    ...(pass.barcode ? [pass.barcode] : []),
+  ];
+  for (const candidate of candidates) {
+    const format =
+      typeof candidate.format === 'string'
+        ? BARCODE_FORMATS[candidate.format]
+        : undefined;
+    const message = candidate.message;
+    if (!format || typeof message !== 'string' || message === '') {
+      continue;
+    }
+
+    const encoding =
+      typeof candidate.messageEncoding === 'string'
+        ? candidate.messageEncoding.toLowerCase()
+        : 'iso-8859-1';
+    const isLatin1 =
+      !encoding.startsWith('utf') &&
+      Array.from(message).every((char) => char.charCodeAt(0) <= 0xff);
+    const bytes = isLatin1
+      ? Uint8Array.from(message, (char) => char.charCodeAt(0))
+      : new TextEncoder().encode(message);
+    if (bytes.length <= MAX_BARCODE_BYTES) {
+      return { format, data: toBase64(bytes) };
+    }
+  }
+  return null;
+};
+
 const overlay = (base: ParsedTicket, extra: ParsedTicket): ParsedTicket => {
   const merged = { ...base };
   for (const key of Object.keys(extra) as (keyof ParsedTicket)[]) {
@@ -283,10 +341,10 @@ export const parsePkpass = (
   });
   const semantic = semanticTicket(pass.semantics);
   const base = fromText[0] ?? emptyTicket('pkpass');
-  const ticket = overlay(
-    overlay(base, structuredTicket(pass, strings)),
-    semantic,
-  );
+  const ticket: ParsedTicket = {
+    ...overlay(overlay(base, structuredTicket(pass, strings)), semantic),
+    barcode: barcodeOf(pass),
+  };
 
   const found =
     (ticket.from && ticket.to) || (ticket.trainNumber && ticket.departure);

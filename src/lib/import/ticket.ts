@@ -103,6 +103,13 @@ const toJourney = (
       },
     ],
     track: null,
+    ticket: ticket.barcode
+      ? {
+          barcodeFormat: ticket.barcode.format,
+          barcodeData: ticket.barcode.data,
+          passengerName: ticket.passengerName,
+        }
+      : null,
   };
 };
 

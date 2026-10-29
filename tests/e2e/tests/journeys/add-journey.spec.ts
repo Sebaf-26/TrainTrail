@@ -20,6 +20,7 @@ test.describe('Add Journey', () => {
 
     // Open add journey modal by clicking the "Add journey" button in the dock
     await page.getByTestId('add-journey-button').click();
+    await page.getByTestId('add-journey-manual').click();
 
     await withinModal(
       async (modal) => {

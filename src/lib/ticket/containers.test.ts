@@ -130,6 +130,14 @@ describe('parsePkpass', () => {
       organizationName: 'Trenitalia',
       description: 'pk_boarding_pass_train_description',
       relevantDate: '2026-10-29T14:15:00Z',
+      // Binary data, as in a real pass: bytes above 0x7f and control characters.
+      barcodes: [
+        {
+          format: 'PKBarcodeFormatAztec',
+          message: String.fromCharCode(0x20, 0x14, 0xc2, 0x08, 0x00, 0xff),
+          messageEncoding: 'iso-8859-1',
+        },
+      ],
       boardingPass: {
         transitType: 'PKTransitTypeTrain',
         headerFields: [
@@ -200,6 +208,58 @@ describe('parsePkpass', () => {
       bookingCode: 'ABC12D',
       passengerName: 'ROSSI MARIO',
     });
+    // Kept byte for byte, not re-encoded as UTF-8.
+    expect(result.tickets[0]?.barcode).toEqual({
+      format: 'aztec',
+      data: btoa(String.fromCharCode(0x20, 0x14, 0xc2, 0x08, 0x00, 0xff)),
+    });
+  });
+
+  it('keeps the barcode of a pass in the format it was issued in', () => {
+    const read = (barcode: Record<string, unknown>) =>
+      parsePkpass(pkpass(pass({ barcodes: [barcode] })), { now: NOW })
+        .tickets[0]?.barcode;
+
+    expect(
+      read({
+        format: 'PKBarcodeFormatQR',
+        message: 'TICKET-è-1',
+        messageEncoding: 'utf-8',
+      }),
+    ).toEqual({
+      format: 'qr',
+      data: btoa(
+        String.fromCharCode(...new TextEncoder().encode('TICKET-è-1')),
+      ),
+    });
+    expect(
+      read({ format: 'PKBarcodeFormatCode128', message: 'ABC123' })?.format,
+    ).toBe('code128');
+    // The older single `barcode` key is read too.
+    expect(
+      parsePkpass(
+        pkpass(
+          pass({ barcode: { format: 'PKBarcodeFormatPDF417', message: 'x' } }),
+        ),
+        { now: NOW },
+      ).tickets[0]?.barcode?.format,
+    ).toBe('pdf417');
+  });
+
+  it('has no barcode when the pass has none or it is not a known format', () => {
+    expect(
+      parsePkpass(pkpass(pass()), { now: NOW }).tickets[0]?.barcode,
+    ).toBeNull();
+    expect(
+      parsePkpass(
+        pkpass(
+          pass({
+            barcodes: [{ format: 'PKBarcodeFormatOther', message: 'x' }],
+          }),
+        ),
+        { now: NOW },
+      ).tickets[0]?.barcode,
+    ).toBeNull();
   });
 
   it('explains why a file is not read', () => {

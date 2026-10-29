@@ -29,7 +29,7 @@
     type IndexedJourney,
   } from '$lib/import/model';
   import { platforms, type Platform } from '$lib/import/platforms';
-  import { journeyAddedState } from '$lib/state.svelte';
+  import { journeyAddedState, openModalsState } from '$lib/state.svelte';
   import { trpc } from '$lib/trpc';
   import { invalidateJourneyData } from '$lib/trpc/invalidation';
   import { cn, pluralize } from '$lib/utils';
@@ -60,6 +60,19 @@
   >([]);
 
   let platform = $state<Platform>(platforms[0]);
+
+  // Opened from "Add a journey > Import a pass or ticket": start on that source.
+  $effect(() => {
+    const requested = openModalsState.importPlatform;
+    if (!requested) return;
+    openModalsState.importPlatform = null;
+    const source = platforms.find((candidate) => candidate.value === requested);
+    if (source) {
+      platform = source;
+      step = 2;
+    }
+  });
+
   let userMapping = $state<Record<string, string>>({});
   let appliedMappings = $state<ImportMappings>(createEmptyImportMappings());
   const handledJourneyIndices = new Set<number>();

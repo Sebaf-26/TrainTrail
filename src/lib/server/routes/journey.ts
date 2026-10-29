@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { authedProcedure, permissionProcedure, router } from '../trpc';
 
 import { db } from '$lib/db';
+import {
+  deleteJourneyTicketPrimitive,
+  getJourneyTicketPrimitive,
+} from '$lib/db/queries';
 import type { CreateJourney } from '$lib/db/types';
 import {
   DEFAULT_JOURNEY_SCOPE,
@@ -39,6 +43,18 @@ export const journeyRouter = router({
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return await listJourneysInScope(resolveJourneyScope(input, user.id));
+    }),
+  // The barcode of a ticket is a credential: it is only ever given back to the
+  // user it was kept for, and never travels with lists, exports or shares.
+  ticket: authedProcedure
+    .input(z.number())
+    .query(async ({ ctx: { user }, input }) => {
+      return await getJourneyTicketPrimitive(db, input, user.id);
+    }),
+  removeTicket: authedProcedure
+    .input(z.number())
+    .mutation(async ({ ctx: { user }, input }) => {
+      return await deleteJourneyTicketPrimitive(db, input, user.id);
     }),
   guests: permissionProcedure('journey.read.own').query(
     async ({ ctx: { user } }) => {

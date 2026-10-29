@@ -9,6 +9,7 @@
   import { page } from '$app/state';
   import { hasClientPermission } from '$lib/authorization/permissions';
   import { NavigationDock } from '$lib/components';
+  import AddJourneyChooser from '$lib/components/AddJourneyChooser.svelte';
   import { TimeDisplayHost } from '$lib/components/display';
   import { ConfirmWrapper, ScreenSize } from '$lib/components/helpers';
   import {
@@ -56,6 +57,7 @@
     <TooltipProvider>
       <SettingsModal bind:open={openModalsState.settings} />
       <AddJourneyModal bind:open={openModalsState.addJourney} />
+      <AddJourneyChooser bind:open={openModalsState.addJourneyChoice} />
       <TimeDisplayHost />
 
       <main class="h-full" data-drawer-wrapper>

@@ -130,6 +130,21 @@ export type journey_passenger = {
      */
     journeyReason: 'leisure' | 'business' | 'commute' | 'other' | null;
 };
+export type journey_ticket = {
+    id: Generated<number>;
+    journeyId: number;
+    userId: string;
+    /**
+     * @kyselyType('aztec' | 'qr' | 'pdf417' | 'code128')
+     */
+    barcodeFormat: 'aztec' | 'qr' | 'pdf417' | 'code128';
+    /**
+     * Base64 of the raw bytes of the barcode message.
+     */
+    barcodeData: string;
+    passengerName: string | null;
+    createdAt: Generated<Timestamp>;
+};
 export type journey_track = {
     journeyId: number;
     track: unknown;
@@ -357,6 +372,7 @@ export type DB = {
     customFieldValue: custom_field_value;
     journey: journey;
     journeyPassenger: journey_passenger;
+    journeyTicket: journey_ticket;
     journeyTrack: journey_track;
     oauthAccessToken: oauth_access_token;
     oauthAuthorizationCode: oauth_authorization_code;

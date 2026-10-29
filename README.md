@@ -17,7 +17,7 @@
 - **Map**: see every journey you took on an interactive map.
 - **Journey history**: keep all your train trips in one place, with train number, platform, coach, seat and class.
 - **Stations**: Europe-wide station list (about 23,000 railway stations, 3,900 of them in Italy), downloaded at first start.
-- **Import a ticket**: read a journey from the message or e-mail of your operator, an Apple Wallet pass (`.pkpass`) or a Google Wallet link, instead of typing it.
+- **Import a ticket**: read a journey from the message or e-mail of your operator, an Apple Wallet pass (`.pkpass`) or a Google Wallet link, instead of typing it. The barcode of a pass is kept with the journey, so you can show it again in its original format (Aztec, QR, PDF417 or Code 128).
 - **Statistics**: distance, time on board, most used operators and stations, countries visited.
 - **Multiple users**: share journeys, secure your data with authentication and integrate with your OAuth provider.
 - **Responsive design** and **dark mode**.

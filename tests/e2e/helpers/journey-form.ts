@@ -10,6 +10,7 @@ export type StationRef = {
 
 export const openAddJourneyModal = async (page: Page): Promise<Locator> => {
   await page.getByTestId('add-journey-button').click();
+  await page.getByTestId('add-journey-manual').click();
   const modal = page.getByRole('dialog').filter({ hasText: /new journey/i });
   await expect(modal).toBeVisible();
   return modal;
