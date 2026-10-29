@@ -10,6 +10,10 @@ const ABBREVIATIONS: [RegExp, string][] = [
   [/\bS\.\s?M\.\s?NOVELLA\b/gi, 'Santa Maria Novella'],
   [/\bS\.\s?LUCIA\b/gi, 'Santa Lucia'],
   [/\bTIB\.?(?=\s|$)/gi, 'Tiburtina'],
+  // ÖBB prints upper-case names, with abbreviations of its own.
+  [/\bC\.\s?MARTE\b/gi, 'Campo di Marte'],
+  [/\bHBF\b/gi, 'Hbf'],
+  [/\bHAUPTBAHNHOF\b/gi, 'Hbf'],
 ];
 
 const collapse = (name: string) => name.replace(/\s{2,}/g, ' ').trim();

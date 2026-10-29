@@ -86,7 +86,13 @@ const toJourney = (
     arrivalPlatform: null,
     trainNumber: ticket.trainNumber,
     unitNumber: null,
-    note: ticket.bookingCode ? `Booking code ${ticket.bookingCode}` : null,
+    note:
+      [
+        ticket.bookingCode ? `Booking code ${ticket.bookingCode}` : null,
+        ticket.details,
+      ]
+        .filter(Boolean)
+        .join('\n') || null,
     from,
     to,
     operator,
@@ -95,7 +101,7 @@ const toJourney = (
       {
         userId,
         guestName: null,
-        seat: null,
+        seat: ticket.seatType,
         coach: ticket.coach,
         seatNumber: ticket.seat,
         seatClass: ticket.seatClass,

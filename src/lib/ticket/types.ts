@@ -21,7 +21,8 @@ export type TicketBarcode = {
   data: string;
 };
 
-export type TicketSource = 'text' | 'email' | 'pkpass' | 'google-wallet';
+export type TicketSource =
+  'text' | 'email' | 'pkpass' | 'pdf' | 'google-wallet';
 
 /**
  * One train leg read from a ticket. Every field is optional on the ticket, so
@@ -43,9 +44,13 @@ export type ParsedTicket = {
   departurePlatform: string | null;
   coach: string | null;
   seat: string | null;
+  /** Where the seat is, when the ticket says so (window, aisle). */
+  seatType: 'window' | 'aisle' | 'other' | null;
   seatClass: SeatClass | null;
   bookingCode: string | null;
   passengerName: string | null;
+  /** What else the ticket says about the place (other seats, the type of cabin), for the note. */
+  details: string | null;
   barcode: TicketBarcode | null;
 };
 
@@ -67,8 +72,10 @@ export const emptyTicket = (source: TicketSource): ParsedTicket => ({
   departurePlatform: null,
   coach: null,
   seat: null,
+  seatType: null,
   seatClass: null,
   bookingCode: null,
   passengerName: null,
+  details: null,
   barcode: null,
 });

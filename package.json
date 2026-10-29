@@ -40,6 +40,7 @@
     "bwip-js": "^4.11.4",
     "fflate": "0.8.3",
     "memoize": "^11",
+    "pdfjs-dist": "^6.4.299",
     "pg": "^8.20.0",
     "pmtiles": "^4.5.0",
     "postal-mime": "2.7.6"

@@ -1,6 +1,8 @@
 import { parseEml } from './eml';
 import { hasGoogleWalletLink, parseGoogleWalletLink } from './google-wallet';
 import { mergeTickets } from './merge';
+import { parseOebbPages } from './oebb';
+import { extractPdfPages } from './pdf';
 import { isPkpass, parsePkpass } from './pkpass';
 import { parseTicketText } from './text';
 import type { ParseTicketResult } from './types';
@@ -16,7 +18,7 @@ export type {
 export type TicketInput = {
   /** Text pasted by the user: a message, an e-mail or a Google Wallet link */
   text?: string;
-  /** An uploaded .pkpass, .eml or text file */
+  /** An uploaded .pkpass, .eml, .pdf or text file */
   file?: { name: string; type?: string; bytes: Uint8Array };
 };
 
@@ -33,6 +35,56 @@ const isEmlFile = (name: string, type?: string) =>
 const isPkpassFile = (name: string, type?: string) =>
   name.toLowerCase().endsWith('.pkpass') ||
   type === 'application/vnd.apple.pkpass';
+
+const isPdfFile = (name: string, type?: string) =>
+  name.toLowerCase().endsWith('.pdf') || type === 'application/pdf';
+
+/** "%PDF" at the start of the file. */
+const looksLikePdf = (bytes: Uint8Array) =>
+  bytes.length > 4 &&
+  bytes[0] === 0x25 &&
+  bytes[1] === 0x50 &&
+  bytes[2] === 0x44 &&
+  bytes[3] === 0x46;
+
+/**
+ * A ticket as PDF: its text is read with pdf.js, then as an ÖBB ticket, and
+ * as plain ticket text when it is not one. A PDF with no text (a scan without
+ * OCR) says so, as nothing can be read from it.
+ */
+const parsePdf = async (
+  bytes: Uint8Array,
+  options: { now?: Date },
+): Promise<ParseTicketResult> => {
+  let pages: string[];
+  try {
+    pages = await extractPdfPages(bytes);
+  } catch {
+    return { tickets: [], warnings: ['The file is not a readable PDF.'] };
+  }
+  if (pages.every((page) => page.trim() === '')) {
+    return {
+      tickets: [],
+      warnings: [
+        'This PDF has no text to read (it may be a scan). Paste the ticket text instead.',
+      ],
+    };
+  }
+
+  const oebb = parseOebbPages(pages, options);
+  if (oebb.tickets.length > 0) {
+    return oebb;
+  }
+
+  const tickets = parseTicketText(pages.join('\n\n'), options).map(
+    (ticket) => ({ ...ticket, source: 'pdf' as const }),
+  );
+  return {
+    tickets,
+    warnings:
+      tickets.length === 0 ? ['No train journey was found in this PDF.'] : [],
+  };
+};
 
 const parseText = async (
   text: string,
@@ -74,6 +126,9 @@ export const parseTicketInput = async (
     }
     if (isEmlFile(file.name, file.type)) {
       return parseEml(file.bytes, options);
+    }
+    if (isPdfFile(file.name, file.type) || looksLikePdf(file.bytes)) {
+      return parsePdf(file.bytes, options);
     }
     return parseText(new TextDecoder().decode(file.bytes), options.now);
   }
