@@ -14,13 +14,19 @@ RUN git init -q . \
  && git fetch -q --depth 1 origin "$ORR_REF" \
  && git checkout -q FETCH_HEAD
 # The Maven cache survives a failed build, so a flaky network only costs a retry.
-# Timeouts make a stalled download fail and be retried instead of hanging.
+# Timeouts make a stalled download fail, and the loop retries it: the jar of
+# graphhopper-web (47 MB) only exists on maven.geofabrik.de, and a dropped
+# connection there fails the whole build otherwise.
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -DskipTests \
-      -Dmaven.wagon.http.retryHandler.count=5 \
-      -Daether.connector.connectTimeout=30000 \
-      -Daether.connector.requestTimeout=120000 \
-      package \
+    for attempt in 1 2 3 4; do \
+      mvn -B -DskipTests \
+        -Dmaven.wagon.http.retryHandler.count=5 \
+        -Daether.connector.connectTimeout=30000 \
+        -Daether.connector.requestTimeout=300000 \
+        package && break; \
+      echo "Maven failed (attempt $attempt), retrying"; \
+      [ "$attempt" = 4 ] && exit 1; \
+    done \
  && cp target/railway_routing-*.jar /railway_routing.jar
 
 FROM eclipse-temurin:17-jre
