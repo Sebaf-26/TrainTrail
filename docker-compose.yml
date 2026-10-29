@@ -32,7 +32,8 @@ services:
 
   traintrail:
     container_name: traintrail
-    image: traintrail:latest
+    # No `image:` here on purpose: with one, `docker compose pull` (run by Portainer
+    # before every deploy) tries to download it from Docker Hub and fails.
     build:
       context: .
       dockerfile: docker/Dockerfile

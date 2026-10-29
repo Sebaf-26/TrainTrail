@@ -24,6 +24,7 @@ L'origine del progetto e le condizioni della licenza sono in [NOTICE](NOTICE).
 ### Corretto
 
 - La build Docker falliva perché `.dockerignore` escludeva la cartella `data/` con operatori e treni.
+- Lo stack Git in Portainer non partiva: prima di ogni deploy provava a scaricare da Docker Hub un'immagine `traintrail` che non esiste. Ora il compose costruisce l'immagine e basta.
 
 ### Rimosso
 
