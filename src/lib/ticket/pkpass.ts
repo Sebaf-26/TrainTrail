@@ -142,18 +142,22 @@ const semanticTicket = (
   return ticket;
 };
 
+const structureOf = (pass: PassJson): PassStructure =>
+  pass.boardingPass ??
+  pass.eventTicket ??
+  pass.generic ??
+  pass.coupon ??
+  pass.storeCard ??
+  {};
+
+const localizer = (strings: Map<string, string>) => (value: unknown) => {
+  const text = typeof value === 'string' ? value : String(value ?? '');
+  return strings.get(text) ?? text;
+};
+
 const fieldText = (pass: PassJson, strings: Map<string, string>) => {
-  const localize = (value: unknown) => {
-    const text = typeof value === 'string' ? value : String(value ?? '');
-    return strings.get(text) ?? text;
-  };
-  const structure =
-    pass.boardingPass ??
-    pass.eventTicket ??
-    pass.generic ??
-    pass.coupon ??
-    pass.storeCard ??
-    {};
+  const localize = localizer(strings);
+  const structure = structureOf(pass);
 
   const lines = [
     localize(pass.organizationName),
@@ -165,6 +169,60 @@ const fieldText = (pass: PassJson, strings: Map<string, string>) => {
     }),
   ];
   return lines.filter(Boolean).join('\n');
+};
+
+const STATION_LABEL_KEY =
+  /^(?:(?:departure|arrival|origin|destination)[_ ]?(?:location|station)|from|to)$/i;
+const COACH_SEAT_LABEL =
+  /(?:carr|vettura|coach|wagon|car)\b.*(?:posto|seat|place)/i;
+const COACH_SEAT_VALUE = /^\s*(\w{1,3})\s*[-/]\s*(\w{1,4})\s*$/;
+
+/**
+ * What the structure of the pass says outright. The two date-times in the
+ * primary fields are the times printed on the ticket: Trenitalia marks them
+ * `ignoresTimeZone`, so their `Z` is not real, unlike the header date, which
+ * is the departure in UTC and would read an hour early. Station names can be
+ * the labels of those fields, and "Carr. - Posto" holds coach and seat.
+ */
+const structuredTicket = (
+  pass: PassJson,
+  strings: Map<string, string>,
+): ParsedTicket => {
+  const ticket = emptyTicket('pkpass');
+  const localize = localizer(strings);
+  const structure = structureOf(pass);
+
+  const timed = (structure.primaryFields ?? []).filter(
+    (field) =>
+      typeof field.value === 'string' && ISO_DATE_TIME.test(field.value),
+  );
+  if (timed.length === 2) {
+    const [first, second] = timed as [PassField, PassField];
+    const [departure, arrival] = /arriv/i.test(first.key ?? '')
+      ? [second, first]
+      : [first, second];
+    const stationOf = (field: PassField) => {
+      const label = typeof field.label === 'string' ? field.label : '';
+      return STATION_LABEL_KEY.test(label) && strings.has(label)
+        ? localize(label)
+        : null;
+    };
+    ticket.departure = toDateTime(departure.value);
+    ticket.arrival = toDateTime(arrival.value);
+    ticket.from = stationOf(departure);
+    ticket.to = stationOf(arrival);
+  }
+
+  for (const field of FIELD_GROUPS.flatMap((group) => structure[group] ?? [])) {
+    const match = COACH_SEAT_LABEL.test(localize(field.label))
+      ? COACH_SEAT_VALUE.exec(String(field.value ?? ''))
+      : null;
+    if (match) {
+      ticket.coach = match[1]!;
+      ticket.seat = match[2]!;
+    }
+  }
+  return ticket;
 };
 
 const overlay = (base: ParsedTicket, extra: ParsedTicket): ParsedTicket => {
@@ -218,13 +276,17 @@ export const parsePkpass = (
       ? relevantDate
       : options.now;
 
-  const fromText = parseTicketText(fieldText(pass, pickStrings(files)), {
+  const strings = pickStrings(files);
+  const fromText = parseTicketText(fieldText(pass, strings), {
     source: 'pkpass',
     now,
   });
   const semantic = semanticTicket(pass.semantics);
   const base = fromText[0] ?? emptyTicket('pkpass');
-  const ticket = overlay(base, semantic);
+  const ticket = overlay(
+    overlay(base, structuredTicket(pass, strings)),
+    semantic,
+  );
 
   const found =
     (ticket.from && ticket.to) || (ticket.trainNumber && ticket.departure);

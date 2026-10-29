@@ -7,7 +7,8 @@ import { looksLikeEml, parseTicketInput } from './index';
 import { parsePkpass } from './pkpass';
 
 // Samples are modelled on the usual structure of these formats, not copies of
-// real tickets: add real ones here when a format is not read correctly.
+// real tickets (apart from the Trenitalia pass below, with its personal data
+// replaced): add real ones here when a format is not read correctly.
 const NOW = new Date(2026, 9, 20);
 
 const pass = (overrides: Record<string, unknown> = {}) => ({
@@ -117,6 +118,87 @@ describe('parsePkpass', () => {
     expect(ticket).toMatchObject({
       from: 'Milano Centrale',
       to: 'Roma Termini',
+    });
+  });
+
+  // Structure of a real Trenitalia pass (ProntoTreno); name, booking codes and
+  // serial are made up. The times in the primary fields are the printed ones
+  // (`ignoresTimeZone`), while the header date is the departure in UTC.
+  it('reads the times, stations and seat of a Trenitalia pass', () => {
+    const data = {
+      formatVersion: 1,
+      organizationName: 'Trenitalia',
+      description: 'pk_boarding_pass_train_description',
+      relevantDate: '2026-10-29T14:15:00Z',
+      boardingPass: {
+        transitType: 'PKTransitTypeTrain',
+        headerFields: [
+          {
+            key: 'date',
+            label: 'pk_label_date',
+            value: '2026-10-29T14:15:00Z',
+            dateStyle: 'PKDateStyleShort',
+            isRelative: true,
+          },
+        ],
+        primaryFields: [
+          {
+            key: 'departure_time',
+            label: 'departure_location',
+            value: '2026-10-29T15:15:00Z',
+            timeStyle: 'PKDateStyleShort',
+            ignoresTimeZone: true,
+          },
+          {
+            key: 'arrival_time',
+            label: 'arrival_location',
+            value: '2026-10-29T18:50:00Z',
+            timeStyle: 'PKDateStyleShort',
+            ignoresTimeZone: true,
+          },
+        ],
+        secondaryFields: [
+          { key: 'pnr', label: 'PNR', value: 'ABC12D' },
+          { key: 'cp', label: 'pk_label_cp', value: '123456' },
+          { key: 'seat', label: 'pk_label_wagon_seat', value: '2 - 14B' },
+        ],
+        auxiliaryFields: [
+          {
+            key: 'passenger',
+            label: 'pk_label_passenger',
+            value: 'ROSSI MARIO',
+          },
+          { key: 'transport', label: 'pk_label_train', value: 'FR 8623' },
+        ],
+      },
+    };
+    const strings = [
+      '"pk_boarding_pass_train_description"="Biglietto treno da Torino Porta Nuova a Viareggio";',
+      '"departure_location"="Torino Porta Nuova";',
+      '"arrival_location"="Viareggio";',
+      '"pk_label_date"="Data";',
+      '"pk_label_cp"="CP";',
+      '"pk_label_wagon_seat"="Carr. - Posto";',
+      '"pk_label_passenger"="Passeggero";',
+      '"pk_label_train"="Treno";',
+    ].join('\n');
+
+    const result = parsePkpass(
+      pkpass(data, { 'it.lproj/pass.strings': strToU8(strings) }),
+      { now: NOW },
+    );
+
+    expect(result.warnings).toEqual([]);
+    expect(result.tickets[0]).toMatchObject({
+      from: 'Torino Porta Nuova',
+      to: 'Viareggio',
+      departure: { date: '2026-10-29', time: '15:15' },
+      arrival: { date: '2026-10-29', time: '18:50' },
+      trainNumber: 'FR 8623',
+      coach: '2',
+      seat: '14B',
+      bookingCode: 'ABC12D',
+      passengerName: 'ROSSI MARIO',
     });
   });
 
