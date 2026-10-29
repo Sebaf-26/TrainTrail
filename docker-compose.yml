@@ -9,6 +9,18 @@
 #                 the app always listens on 3000.
 #   ADDRESS_HEADER, PUID, PGID, TZ: optional, see below.
 #
+# Optional: routes along the real tracks instead of straight lines. It is a
+# separate service that is not started unless you ask for it, so it can never
+# block the stack: set COMPOSE_PROFILES=routing (in the .env file or in the
+# stack's environment variables) and redeploy. The first start downloads the
+# OpenStreetMap extract and builds the graph, which takes a while.
+#   RAIL_OSM_URL     the .osm.pbf extract to route on (default: Italy, about 2.2 GB).
+#                    A smaller region from download.geofabrik.de is fine; rebuilding
+#                    starts by itself when it changes.
+#   RAIL_JAVA_OPTS   Java options, default "-Xmx4g -Xms256m". The container needs more
+#                    memory than the heap: see RAIL_MEM_LIMIT.
+#   RAIL_MEM_LIMIT   memory limit of the container (default 6g).
+#
 # To use a published image instead, see docker/production/compose.yml.
 services:
   db:
@@ -54,11 +66,42 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TZ:-Europe/Rome}
+      # Where the optional rail-routing service listens. Without it, journeys
+      # keep the straight line between their stations.
+      RAIL_ROUTING_URL: ${RAIL_ROUTING_URL:-http://rail-routing:8989}
     volumes:
       # To keep uploads in a folder on the host, use a bind mount such as
       # /srv/traintrail/uploads:/app/uploads
       - uploads:/app/uploads
 
+  # Real rail routes (OpenRailRouting on OpenStreetMap data). Only started with
+  # COMPOSE_PROFILES=routing. Not published on the host: only TrainTrail reaches it.
+  rail-routing:
+    container_name: traintrail_rail_routing
+    profiles: ['routing']
+    # No `image:` here either, for the same reason as above.
+    build:
+      context: .
+      dockerfile: docker/rail-routing/Dockerfile
+    restart: unless-stopped
+    mem_limit: ${RAIL_MEM_LIMIT:-6g}
+    environment:
+      RAIL_OSM_URL: ${RAIL_OSM_URL:-https://download.geofabrik.de/europe/italy-latest.osm.pbf}
+      RAIL_JAVA_OPTS: ${RAIL_JAVA_OPTS:--Xmx4g -Xms256m}
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # The extract and the graph built from it. To keep them in a folder on
+      # the host, use a bind mount such as /srv/traintrail/rail:/data
+      - rail_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:8989/health || exit 1']
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      # The first start imports the whole extract.
+      start_period: 60m
+
 volumes:
   db_data:
   uploads:
+  rail_data:

@@ -8,6 +8,10 @@ import {
   deleteJourneyTicketPrimitive,
   getJourneyTicketPrimitive,
 } from '$lib/db/queries';
+import {
+  drawJourneyRoute,
+  railRoutingReachable,
+} from '$lib/server/utils/rail-route';
 import type { CreateJourney } from '$lib/db/types';
 import {
   DEFAULT_JOURNEY_SCOPE,
@@ -55,6 +59,15 @@ export const journeyRouter = router({
     .input(z.number())
     .mutation(async ({ ctx: { user }, input }) => {
       return await deleteJourneyTicketPrimitive(db, input, user.id);
+    }),
+  railRoutingEnabled: authedProcedure.query(() => railRoutingReachable()),
+  drawRoute: authedProcedure
+    .input(z.number())
+    .mutation(async ({ ctx: { authorization }, input }) => {
+      if (!(await canAccessJourney(authorization, 'update', input))) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+      return await drawJourneyRoute(input);
     }),
   guests: permissionProcedure('journey.read.own').query(
     async ({ ctx: { user } }) => {

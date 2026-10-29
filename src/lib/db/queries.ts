@@ -526,7 +526,7 @@ export const createManyJourneysPrimitive = async (
     throw new Error('Every journey must have at least one passenger');
   }
 
-  await db.transaction().execute(async (trx) => {
+  return await db.transaction().execute(async (trx) => {
     const journeys = await trx
       .insertInto('journey')
       .values(
@@ -610,6 +610,8 @@ export const createManyJourneysPrimitive = async (
     if (ticketData.length) {
       await trx.insertInto('journeyTicket').values(ticketData).execute();
     }
+
+    return journeys.map(({ id }) => id);
   });
 };
 

@@ -5,6 +5,7 @@ export const journeyTrackSourceFormats = [
   'kml',
   'csv',
   'readsb',
+  'rail',
 ] as const;
 export const MAX_STORED_JOURNEY_TRACK_POINTS = 100_000;
 export const MAX_RENDERED_JOURNEY_TRACK_POINTS = 5_000;
@@ -132,6 +133,8 @@ export const journeyTrackInputSchema = journeyTrackPayloadBaseSchema
 
 export type JourneyTrackSourceFormat =
   (typeof journeyTrackSourceFormats)[number];
+/** The formats a track can be uploaded in; `rail` tracks are computed. */
+export type JourneyTrackFileFormat = Exclude<JourneyTrackSourceFormat, 'rail'>;
 export type JourneyTrackCoordinate = z.infer<
   typeof journeyTrackCoordinateSchema
 >;

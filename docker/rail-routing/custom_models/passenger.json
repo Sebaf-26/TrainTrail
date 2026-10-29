@@ -1,0 +1,13 @@
+// Trains on the main tracks. It is rail.json of OpenRailRouting plus a strong
+// preference against yards, spurs and sidings, so that a route does not cut
+// through the tracks of a depot. They stay usable: a station can be tagged so.
+{
+  "distance_influence": 0,
+  "priority": [
+    { "if": "!rail_access || railway_class != RAIL", "multiply_by": "0" },
+    { "else_if": "railway_service == YARD || railway_service == SPUR || railway_service == SIDING", "multiply_by": "0.05" }
+  ],
+  "speed": [
+    { "if": "true", "limit_to": "rail_average_speed" }
+  ]
+}

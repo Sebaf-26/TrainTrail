@@ -19,6 +19,7 @@
   import { convertDistance, distanceUnitLabel } from '$lib/utils/preferences';
   import type { Preferences } from '$lib/zod/user';
 
+  import JourneyRoute from './JourneyRoute.svelte';
   import JourneyTicket from './JourneyTicket.svelte';
 
   let {
@@ -147,6 +148,8 @@
     </p>
   {/if}
 </section>
+
+<JourneyRoute {journey} />
 
 <JourneyTicket {journey} {seatLabel} />
 

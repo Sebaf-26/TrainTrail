@@ -51,6 +51,23 @@ ORIGIN=https://trains.example.com DB_PASSWORD=choose-a-password docker compose u
 
 Migrations, the station list and the bundled operators and trains are loaded automatically at first start.
 
+### Real rail routes (experimental, optional)
+
+By default a journey is drawn as a straight line between its stations. A separate service,
+[OpenRailRouting](https://github.com/geofabrik/OpenRailRouting) on OpenStreetMap data, can draw it along the real
+tracks instead. It does not start unless you ask for it, so it cannot block the rest of the stack:
+
+1. Set `COMPOSE_PROFILES=routing` in the stack's environment variables (or in `.env`) and redeploy.
+2. The first start downloads an OpenStreetMap extract (Italy, about 2.2 GB, unless you set `RAIL_OSM_URL` to a
+   smaller region from [download.geofabrik.de](https://download.geofabrik.de)) and builds the routing graph. This takes
+   a while and needs memory: the container is limited to `RAIL_MEM_LIMIT` (default 6g) and the Java heap is set with
+   `RAIL_JAVA_OPTS` (default `-Xmx4g`). To try it, start with a small region.
+3. New and imported journeys are drawn along the rails in the background. For journeys you already have, open the
+   journey on the map and press "Draw along the rails". If no route is found, the straight line stays.
+
+Everything the feature does is logged with the `[rail-routing]` prefix, in the TrainTrail container and in the
+`traintrail_rail_routing` one: `docker logs traintrail | grep rail-routing`.
+
 ## 📜 License and credits
 
 TrainTrail is free software released under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Any copy
@@ -69,6 +86,8 @@ the GNU GPL v3: <https://github.com/johanohly/AirTrail>. See [NOTICE](NOTICE) fo
 > [Country Flags](https://flagpedia.net)
 
 > [Station list](https://github.com/trainline-eu/stations) by Trainline, [Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/), downloaded at first start
+
+> Rail routes: map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) ([ODbL](https://opendatacommons.org/licenses/odbl/1-0/)), routed with [OpenRailRouting](https://github.com/geofabrik/OpenRailRouting) by Geofabrik ([Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0))
 
 ### Logo
 

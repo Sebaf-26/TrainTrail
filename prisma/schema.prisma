@@ -208,7 +208,7 @@ model journey_track {
   journey_id Int  @id
   track      Json
 
-  /// @kyselyType('gpx' | 'kml' | 'csv' | 'readsb')
+  /// @kyselyType('gpx' | 'kml' | 'csv' | 'readsb' | 'rail')
   source_format String
   source_name   String?
   point_count   Int

@@ -1,0 +1,65 @@
+# OpenRailRouting configuration for TrainTrail. The OSM extract and the graph
+# location are passed by entrypoint.sh (-Ddw.graphhopper.datareader.file and
+# -Ddw.graphhopper.graph.location).
+graphhopper:
+  datareader.file: ""
+  graph.location: /data/graph-cache
+
+  # One profile: a passenger train on any railway=rail track.
+  profiles:
+    - name: rail
+      turn_costs:
+        vehicle_types: [train]
+        # Reversing costs 5 minutes.
+        u_turn_costs: 300
+        enable_uturn_times: true
+      custom_model_files: [passenger.json, preferred_direction.json]
+
+  custom_models.directory: /app/custom_models
+
+  # No contraction hierarchies: the preparation costs a lot of time and memory,
+  # and TrainTrail asks for a route once per journey.
+  profiles_ch: []
+  profiles_lm: []
+
+  # Only what the profile needs (plus road_environment for snap_preventions).
+  graph.encoded_values: road_environment,rail_access,rail_average_speed,railway_class,railway_service,preferred_direction
+
+  # Detached pieces of track smaller than this are dropped, so that a point is
+  # not snapped onto a track that leads nowhere.
+  prepare.min_network_size: 30
+  prepare.subnetworks.threads: 1
+
+  # Stations are not snapped onto tunnels, bridges or ferries by default;
+  # a request can override this with "snap_preventions".
+  routing.snap_preventions_default: tunnel, bridge, ferry
+  routing.non_ch.max_waypoint_distance: 1000000
+
+  graph.dataaccess.default_type: RAM_STORE
+
+server:
+  application_connectors:
+  - type: http
+    port: 8989
+    # Reachable from the other containers of the stack; the port is not published.
+    bind_host: 0.0.0.0
+    max_request_header_size: 50k
+  request_log:
+      appenders: []
+  admin_connectors:
+  - type: http
+    port: 8990
+    bind_host: localhost
+logging:
+  level: INFO
+  appenders:
+    - type: console
+      time_zone: UTC
+      log_format: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  loggers:
+    "com.graphhopper.osm_warnings":
+      level: DEBUG
+      additive: false
+      appenders:
+        - type: console
+          logFormat: '[%level] %msg%n'

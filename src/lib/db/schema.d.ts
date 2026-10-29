@@ -149,9 +149,9 @@ export type journey_track = {
     journeyId: number;
     track: unknown;
     /**
-     * @kyselyType('gpx' | 'kml' | 'csv' | 'readsb')
+     * @kyselyType('gpx' | 'kml' | 'csv' | 'readsb' | 'rail')
      */
-    sourceFormat: 'gpx' | 'kml' | 'csv' | 'readsb';
+    sourceFormat: 'gpx' | 'kml' | 'csv' | 'readsb' | 'rail';
     sourceName: string | null;
     pointCount: number;
     createdAt: Generated<Timestamp>;

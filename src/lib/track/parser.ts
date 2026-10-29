@@ -3,7 +3,7 @@ import { gpx, kml } from '@tmcw/togeojson';
 import {
   type JourneyTrackCoordinate,
   type JourneyTrackInput,
-  type JourneyTrackSourceFormat,
+  type JourneyTrackFileFormat,
   MAX_STORED_JOURNEY_TRACK_POINTS,
 } from './schema';
 import { parseReadsbTrackLegs } from './readsb';
@@ -61,7 +61,7 @@ export const parseTrackFile = async (
 
 export const parseTrackCandidates = (
   content: string,
-  sourceFormat: JourneyTrackSourceFormat,
+  sourceFormat: JourneyTrackFileFormat,
   sourceName?: string,
 ): ParsedTrackCandidate[] => {
   if (sourceFormat === 'readsb') {
@@ -75,7 +75,7 @@ export const parseTrackCandidates = (
 
 export const parseTrackContent = (
   content: string,
-  sourceFormat: JourneyTrackSourceFormat,
+  sourceFormat: JourneyTrackFileFormat,
   sourceName?: string,
 ): ParsedTrackFile => {
   if (sourceFormat === 'readsb') {
@@ -96,7 +96,7 @@ export const parseTrackContent = (
 
 const toParsedTrackFile = (
   raw: RawTrack,
-  sourceFormat: JourneyTrackSourceFormat,
+  sourceFormat: JourneyTrackFileFormat,
   sourceName?: string,
 ): ParsedTrackFile => {
   if (raw.coordinates.length < 2) {
@@ -132,7 +132,7 @@ const toTrackCandidate = (
 
 const detectTrackSourceFormat = (
   name: string,
-): JourneyTrackSourceFormat | null => {
+): JourneyTrackFileFormat | null => {
   const lower = name.toLowerCase();
   if (lower.endsWith('.gpx')) return 'gpx';
   if (lower.endsWith('.kml')) return 'kml';
@@ -169,7 +169,7 @@ const parseReadsbTrackCandidates = (
 
 const parseXmlTrack = (
   content: string,
-  sourceFormat: Extract<JourneyTrackSourceFormat, 'gpx' | 'kml'>,
+  sourceFormat: Extract<JourneyTrackFileFormat, 'gpx' | 'kml'>,
 ): RawTrack => {
   if (typeof DOMParser === 'undefined') {
     throw new TypeError(

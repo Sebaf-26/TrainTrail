@@ -5,6 +5,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 
 import { db } from '$lib/db';
+import { scheduleRailRoutes } from '$lib/server/utils/rail-route';
 import {
   createJourneyPrimitive,
   createJourneyPrimitiveWithConnection,
@@ -169,7 +170,9 @@ export const getJourney = async (id: number) => {
 };
 
 export const createJourney = async (data: CreateJourney) => {
-  return await createJourneyPrimitive(db, data);
+  const id = await createJourneyPrimitive(db, data);
+  scheduleRailRoutes([id]);
+  return id;
 };
 
 type JourneyAggregatePlan = {
@@ -316,7 +319,7 @@ export const saveJourneyAggregate = async (
     requireScope(journeyScope('create', ownership));
     if (values.passengers.length > 1)
       requireScope(journeyScope('passengers.manage', ownership));
-    return db.transaction().execute(async (trx) => {
+    const created = await db.transaction().execute(async (trx) => {
       const plan = await planJourneyAggregate(trx, {
         existing: null,
         values,
@@ -324,9 +327,11 @@ export const saveJourneyAggregate = async (
       });
       return persistJourneyAggregate(trx, { existing: null, values, plan });
     });
+    scheduleRailRoutes([created]);
+    return created;
   }
 
-  return db.transaction().execute(async (trx) => {
+  const updated = await db.transaction().execute(async (trx) => {
     const existing = await getJourneyPrimitive(trx, id);
     if (!existing) throw new AuthorizationError('Journey not found', 404);
     const ownership = await journeyOwnership(authorization.userId, id, trx);
@@ -352,6 +357,10 @@ export const saveJourneyAggregate = async (
     }
     return persistJourneyAggregate(trx, { existing, values, plan });
   });
+  // Changed stations make a computed route stale; it is redrawn when it no
+  // longer fits them.
+  scheduleRailRoutes([updated]);
+  return updated;
 };
 
 type JourneyFormValues = {
@@ -644,7 +653,7 @@ export const createManyJourneys = async (
       (acc, f) => acc + (f.passengers?.length ?? 0),
       0,
     );
-    await createManyJourneysPrimitive(db, data);
+    scheduleRailRoutes(await createManyJourneysPrimitive(db, data));
     return { insertedJourneys, updatedJourneys: 0, attachedPassengers };
   }
 
@@ -766,7 +775,7 @@ export const createManyJourneys = async (
   // Insert new journeys and their passengers
   let insertedJourneys = 0;
   if (journeysToInsert.length) {
-    await createManyJourneysPrimitive(db, journeysToInsert);
+    scheduleRailRoutes(await createManyJourneysPrimitive(db, journeysToInsert));
     insertedJourneys = journeysToInsert.length;
   }
 
