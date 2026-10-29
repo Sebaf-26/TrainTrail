@@ -29,6 +29,7 @@ L'origine del progetto e le condizioni della licenza sono in [NOTICE](NOTICE).
 
 - La build Docker falliva perché `.dockerignore` escludeva la cartella `data/` con operatori e treni.
 - Importazione di un biglietto `.pkpass` di Trenitalia: gli orari di partenza e arrivo erano sbagliati (si leggeva la data in UTC dell'intestazione, un'ora prima) e carrozza e posto venivano confusi. Ora si leggono gli orari stampati sul biglietto, le stazioni e il campo "Carr. - Posto".
+- Il servizio del percorso reale scriveva nei log la barra di avanzamento del download, illeggibile in un container: ora scrive una riga ogni 30 secondi con la dimensione scaricata, e un download interrotto riprende da dove era arrivato.
 - Lo stack Git in Portainer non partiva: prima di ogni deploy provava a scaricare da Docker Hub un'immagine `traintrail` che non esiste. Ora il compose costruisce l'immagine e basta.
 
 ### Rimosso

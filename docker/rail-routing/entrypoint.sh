@@ -30,13 +30,25 @@ mkdir -p "$DATA"
 # A different URL means a different extract: fetch it and build the graph again.
 if [ -f "$DATA/source.url" ] && [ "$(cat "$DATA/source.url")" != "$URL" ]; then
   log "the extract changed (was $(cat "$DATA/source.url")): downloading it again and rebuilding the graph"
-  rm -rf "$PBF" "$GRAPH" "$STAMP"
+  rm -rf "$PBF" "$PBF.part" "$GRAPH" "$STAMP"
 fi
 
 if [ ! -s "$PBF" ]; then
   log "downloading $URL"
   started="$(date +%s)"
-  curl -fL --retry 5 --retry-delay 15 --retry-all-errors -o "$PBF.part" "$URL"
+  # No progress meter: it redraws one line with carriage returns, which a
+  # container log turns into an unreadable mess. The size is logged below
+  # instead, and a partial file is continued if the container restarts.
+  curl -fL --silent --show-error -C - --retry 5 --retry-delay 15 --retry-all-errors \
+    -o "$PBF.part" "$URL" &
+  curl_pid=$!
+  while kill -0 "$curl_pid" 2>/dev/null; do
+    sleep 30
+    if kill -0 "$curl_pid" 2>/dev/null; then
+      log "downloading... $(size "$PBF.part") so far, $(($(date +%s) - started)) s elapsed"
+    fi
+  done
+  wait "$curl_pid"
   mv "$PBF.part" "$PBF"
   echo "$URL" > "$DATA/source.url"
   log "downloaded $(size "$PBF") in $(($(date +%s) - started)) s"
