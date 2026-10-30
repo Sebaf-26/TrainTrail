@@ -8,23 +8,24 @@ import {
 
 /**
  * Trenitalia tickets as PDF (the receipt of the app or the website). A page
- * holds one or two journeys, each introduced by "VIAGGIO da X a Y"; the PDF of
+ * holds one or two journeys, each introduced by "VIAGGIO da X a Y" ("TRAVEL from X
+ * To Y" in the English version of the ticket); the PDF of
  * a trip with a change holds one journey per leg. Tickets for abroad have the
  * same fields with an English label next to the Italian one.
  */
 
-const LEG_START = /^\s*VIAGGIO\s+da\b/;
+const LEG_START = /^\s*(?:VIAGGIO\s+da|TRAVEL\s+from)\b/i;
 const ITINERARY_START = /DETTAGLIO VIAGGIO\s*\/\s*ITINERARY DETAILS/i;
 const LEG_END =
-  /DETTAGLIO PASSEGGERI|CONDIZIONI DI TRASPORTO|^\s*Pagina\s+\d+\s+di\s+\d+/i;
+  /DETTAGLIO PASSEGGERI|PASSENGERS DETAILS|CONDIZIONI DI TRASPORTO|TRANSPORT CONDITIONS|^\s*(?:Pagina\s+\d+\s+di|Page\s+\d+\s+of)\s+\d+/i;
 
 /** VIAGGIO da X a Y il 28/10/2021 alle ore 13:30 (the date may be "del", or missing). */
 const HEADER =
-  /VIAGGIO\s+da\s+(.+?)\s+a\s+(.+?)(?:\s+(?:il|del)\s+(\d{2})\/(\d{2})\/(\d{4})(?:\s+alle\s*ore\s*(\d{1,2}:\d{2}))?)?(?=\s{3,}|\s+(?:PNR|Codice)\b|\s*$)/;
+  /(?:VIAGGIO\s+da|TRAVEL\s+from)\s+(.+?)\s+(?:a|to)\s+(.+?)(?:\s+(?:il|del|on)\s+(\d{2})\/(\d{2})\/(\d{4})(?:\s+(?:alle\s*ore|at)\s*(\d{1,2}:\d{2}))?)?(?=\s{3,}|\s+(?:PNR|Codice|Entitlement)\b|\s*$)/i;
 
-/** Ore 13:30 - 28/10/2021, also "Ore/Time 13:30 - ..." */
+/** Ore 13:30 - 28/10/2021, also "Ore/Time 13:30 - ..." and "Hours 13:30 - ..." */
 const STOP_TIME =
-  /Ore(?:\s*\/\s*Time)?\s+(\d{1,2}:\d{2})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/g;
+  /(?:Ore|Hours)(?:\s*\/\s*Time)?\s+(\d{1,2}:\d{2})\s*-\s*(\d{2})\/(\d{2})\/(\d{4})/g;
 
 const columns = (text: string) =>
   text
@@ -84,6 +85,12 @@ const chunksOf = (page: string[]): Chunk[] => {
 
 const readLeg = ({ lines, page }: Chunk): ParsedTicket | null => {
   const text = lines.join('\n');
+
+  // A leg run by bus ("Bus: Autobus", "Servizio bus emesso per conto di ...")
+  // is not a train journey.
+  if (/^\s*Bus:/im.test(text) || /Servizio bus/i.test(text)) {
+    return null;
+  }
   const header = HEADER.exec(lines.slice(0, 2).join('   '));
   const stops = [...text.matchAll(STOP_TIME)];
 
@@ -118,7 +125,7 @@ const readLeg = ({ lines, page }: Chunk): ParsedTicket | null => {
   // heading "Stazione di Partenza/From".
   if (!ticket.from || !ticket.to) {
     const heading = lines.findIndex((line) =>
-      /Stazione di Partenza/i.test(line),
+      /Stazione di Partenza|Departure station/i.test(line),
     );
     const names =
       heading >= 0
@@ -130,13 +137,16 @@ const readLeg = ({ lines, page }: Chunk): ParsedTicket | null => {
 
   // "Treno: Frecciarossa  8623"; abroad the value is on the line below.
   const trainLine = lines.findIndex((line) =>
-    /Treno(?:\s*\/\s*Train)?:/i.test(line),
+    /\b(?:Treno(?:\s*\/\s*Train)?|Train):/i.test(line),
   );
   if (trainLine >= 0) {
-    const sameLine = valueOf(lines, /Treno(?:\s*\/\s*Train)?:\s*/i);
+    const sameLine = valueOf(lines, /\b(?:Treno(?:\s*\/\s*Train)?|Train):\s*/i);
     const printed = sameLine
       ? columns(
-          lines[trainLine]!.replace(/^.*?Treno(?:\s*\/\s*Train)?:/i, ''),
+          lines[trainLine]!.replace(
+            /^.*?\b(?:Treno(?:\s*\/\s*Train)?|Train):/i,
+            '',
+          ),
         ).join(' ')
       : (columns(lines[trainLine + 1] ?? '').slice(-1)[0] ?? '');
     // Trenord runs regional trains that Trenitalia sells: "Regionale Trenord".
@@ -148,11 +158,15 @@ const readLeg = ({ lines, page }: Chunk): ParsedTicket | null => {
     ticket.trainNumber = train.number;
   }
 
-  const service = valueOf(lines, /Servizio(?:\s*\/\s*Service)?:\s*/i);
+  const service = valueOf(
+    lines,
+    /\b(?:Servizio(?:\s*\/\s*Service)?|Service):\s*/i,
+  );
   ticket.seatClass = service ? seatClassOf(service) : null;
-  ticket.coach = valueOf(lines, /Carrozza(?:\s*\/\s*Coach)?:\s*/i) || null;
+  ticket.coach =
+    valueOf(lines, /\b(?:Carrozza(?:\s*\/\s*Coach)?|Coaches?):\s*/i) || null;
 
-  const seats = (valueOf(lines, /Posti:\s*/i) ?? '')
+  const seats = (valueOf(lines, /\b(?:Posti|Seats?):\s*/i) ?? '')
     .split(/[\s,]+/)
     .filter((seat) => /^\d+[A-Z]?$/i.test(seat));
   ticket.seat = seats[0] ?? null;
@@ -162,8 +176,8 @@ const readLeg = ({ lines, page }: Chunk): ParsedTicket | null => {
   const scopes = [text, page.join('\n')];
   for (const pattern of [
     /PNR:\s*([A-Z0-9]{5,8})\b/,
-    /Codice Biglietto:\s*(\d+)/,
-    /(?:Numero Titolo|Titolo numero\s*\/\s*Title number):?\s*(\d+)/,
+    /(?:Codice Biglietto|Ticket Code):\s*(\d+)/i,
+    /(?:Numero Titolo|Titolo numero\s*\/\s*Title number|Entitlement Number):?\s*(\d+)/i,
   ]) {
     const code = scopes.map((scope) => pattern.exec(scope)?.[1]).find(Boolean);
     if (code) {
@@ -202,7 +216,7 @@ const withoutDuplicates = (tickets: ParsedTicket[]) => {
 
 const isTrenitalia = (text: string) =>
   /trenitalia/i.test(text) &&
-  (/VIAGGIO\s+da\b/.test(text) || ITINERARY_START.test(text));
+  (/VIAGGIO\s+da\b|TRAVEL\s+from\b/i.test(text) || ITINERARY_START.test(text));
 
 /** Reads the journeys of a Trenitalia PDF ticket from the text of its pages. */
 export const parseTrenitaliaPages = (

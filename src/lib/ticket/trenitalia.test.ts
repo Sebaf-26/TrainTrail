@@ -231,6 +231,54 @@ describe('parseTrenitaliaPages', () => {
   });
 });
 
+describe('parseTrenitaliaPages in English and for buses', () => {
+  it('reads the English version of a ticket', () => {
+    const { tickets } = parseTrenitaliaPages([
+      page(
+        `${SPACE}Page 1 of 1`,
+        `${SPACE}Single Ticket - Issuer 1183`,
+        `${SPACE}Entitlement Number: 4444444444`,
+        ' TRAVEL from Viareggio To Torino Porta Nuova on 29/09/2030 at 10:12   PNR: VCC12D',
+        ' Departure station   Arrival station   Train: FrecciaBianca   8606',
+        '   Service: 2° Classe',
+        ' Viareggio   Torino Porta Nuova   Coaches: 6',
+        ' Hours 10:12 - 29/09/2030   Hours 13:40 - 29/09/2030',
+        '   Seats: 3B',
+        'PASSENGERS DETAILS',
+        'For information go to www.trenitalia.com',
+      ),
+    ]);
+
+    expect(tickets[0]).toMatchObject({
+      from: 'Viareggio',
+      to: 'Torino Porta Nuova',
+      departure: { date: '2030-09-29', time: '10:12' },
+      arrival: { date: '2030-09-29', time: '13:40' },
+      trainNumber: 'FB 8606',
+      seatClass: 'second',
+      coach: '6',
+      seat: '3B',
+      bookingCode: 'VCC12D',
+    });
+  });
+
+  it('does not take a leg run by bus for a train journey', () => {
+    const result = parseTrenitaliaPages([
+      page(
+        'Trenitalia',
+        ' VIAGGIO da Napoli Piazza Garibaldi a POMPEI SCAVI il 02/03/2030 alle ore 11:57   Codice Biglietto: 5555555555',
+        " Servizio bus emesso per conto di un'azienda",
+        ' Stazione di Partenza   Stazione di Arrivo   Bus: Autobus   NP17',
+        '   Servizio: 2° Classe',
+        ' Ore 11:57 - 02/03/2030   Ore 12:36 - 02/03/2030',
+        'CONDIZIONI DI TRASPORTO',
+      ),
+    ]);
+
+    expect(result.tickets).toEqual([]);
+  });
+});
+
 describe('describeTrain', () => {
   it.each([
     ['Frecciarossa 8623', 'FR 8623', 'Frecciarossa'],
